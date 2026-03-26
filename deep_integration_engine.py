@@ -31,9 +31,17 @@ from decision_engine import DecisionEngine, DecisionContext
 from social_network_system import SocialNetworkSystem, PersonalityType
 from government_system import GovernmentSystem
 from deep_micro_systems import DeepMicroSystem, RiskTolerance, ReligionType
-from swarm_intelligence import SwarmIntelligenceEngine
-from financial_system import FinancialSystem
 from ability_system import AbilitySystem
+
+# 扩展子系统（容错导入，缺失不影响核心运行）
+try:
+    from swarm_intelligence import SwarmIntelligenceEngine
+except ImportError:
+    SwarmIntelligenceEngine = None
+try:
+    from financial_system import FinancialSystem
+except ImportError:
+    FinancialSystem = None
 
 # 扩展子系统（容错导入，缺失不影响核心运行）
 try:
@@ -271,11 +279,11 @@ class DeepIntegrationEngine:
         self.government_system = GovernmentSystem(self.config.get('government', {}))
         self.deep_micro_system = DeepMicroSystem(self.config.get('deep_micro', {}))
         
-        # 群体智能引擎
-        self.swarm_engine = SwarmIntelligenceEngine(self.config.get('swarm', {}))
+        # 群体智能引擎（可选，开源版本缺失不影响运行）
+        self.swarm_engine = SwarmIntelligenceEngine(self.config.get('swarm', {})) if SwarmIntelligenceEngine else None
         
-        # 金融系统
-        self.financial_system = FinancialSystem(self.config.get('financial', {}))
+        # 金融系统（可选，开源版本缺失不影响运行）
+        self.financial_system = FinancialSystem(self.config.get('financial', {})) if FinancialSystem else None
         
         # 决策引擎
         self.decision_engine = DecisionEngine(self.config.get('decision', {}))

@@ -30,8 +30,13 @@ os.makedirs(EXPERIMENTS_PATH, exist_ok=True)
 # 相对 import（同目录下的模块）
 from deep_integration_engine import DeepIntegrationEngine, UnifiedAgent
 from experiment_templates_v2 import ExperimentTemplateLibrary, ExperimentTemplate
-from report_generator_v2 import SmartReportGenerator
 from experiment_report_generator import ExperimentReportGenerator
+
+# 商业模块（开源版本缺失不影响核心运行）
+try:
+    from report_generator_v2 import SmartReportGenerator
+except ImportError:
+    SmartReportGenerator = None
 
 
 class ExperimentStatus:
@@ -48,7 +53,10 @@ class ExperimentRunner:
 
     def __init__(self):
         self.template_library = ExperimentTemplateLibrary()
-        self.report_generator = SmartReportGenerator(output_path=REPORTS_PATH)
+        if SmartReportGenerator:
+            self.report_generator = SmartReportGenerator(output_path=REPORTS_PATH)
+        else:
+            self.report_generator = None
         self.experiments: Dict[str, dict] = {}  # experiment_id -> experiment state
         self._lock = threading.Lock()
 

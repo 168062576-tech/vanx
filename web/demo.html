@@ -1,6 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>御龙军虚拟 Agent 世界 · 演示模式</title>
@@ -637,14 +640,22 @@ function generateMockData() {
 // ---- Fetch demo data ----
 async function fetchDemoData() {
   try {
-    const resp = await fetch('/api/demo/start', {
+    const resp = await fetch('/api/v1/demo/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
     if (resp.ok) {
       const raw = await resp.json();
-      // Normalize: API may return {success, data: {months: [...]}} or {months: [...]}
-      demoData = raw.data || raw;
+      // API returns {success: true, data: {phases: [...], highlights: [...]}}
+      if (raw.success && raw.data && raw.data.phases) {
+        demoData = {
+          months: raw.data.phases,
+          highlights: raw.data.highlights || []
+        };
+      } else {
+        console.warn('Demo API returned unexpected format, using mock');
+        demoData = generateMockData();
+      }
       if (!demoData.months || !demoData.months.length) {
         console.warn('Demo API returned no months data, using mock');
         demoData = generateMockData();

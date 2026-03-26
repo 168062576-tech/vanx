@@ -1,6 +1,9 @@
 ﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>御龙军虚拟世界 - 实验控制台 v5.0</title>
@@ -359,7 +362,7 @@
             <a class="nav-card primary" href="javascript:void(0)" onclick="switchView('experiment', document.querySelectorAll('.view-tab')[1])">
                 <div class="card-icon">🚀</div>
                 <div class="card-title">开始实验</div>
-                <div class="card-desc">24 个实验模板 · 6 大分类 · 真实 Agent 演化 · 自动生成商业报告</div>
+                <div class="card-desc">3 个实验模板 · 真实 Agent 演化 · 自动生成商业报告</div>
             </a>
             <a class="nav-card" href="/">
                 <div class="card-icon">🌍</div>
@@ -415,7 +418,7 @@
 
         <!-- STEP 1: 选择模板 -->
         <div class="c-panel" id="step1">
-            <h2>🎯 第 1 步：选择实验模板（24 个场景）</h2>
+            <h2>🎯 第 1 步：选择实验模板（3 个示例场景）</h2>
             <div class="filter-bar" id="filterBar"></div>
             <div class="template-grid" id="templateGrid"></div>
             <div class="actions">
@@ -557,6 +560,8 @@
 <script>
 // ---- 分类映射 ----
 const catMap = {
+    "economic": {"icon": "📊", "label": "经济"},
+
     "education": {"icon": "📚", "label": "教育"},
     "business": {"icon": "💼", "label": "商业"},
     "policy": {"icon": "🏛️", "label": "政策"},
@@ -567,6 +572,7 @@ const catMap = {
 
 // ---- 模板预设文字 ----
 const PRESETS = {
+    'crisis_001': { desc: '模拟经济危机爆发后的失业率增长、贫富分化变化和社会影响', focus: '失业率、基尼系数、贫困率、平均收入下降', goals: '失业率控制在 10% 以内，基尼系数降至 0.45', risks: '经济衰退、社会动荡、失业率飙升' }, 'epidemic_001': { desc: '模拟传染病传播过程，评估不同防控措施的效果', focus: '感染率、死亡率、医疗资源负荷、经济损失', goals: '感染率控制在 30% 以内，死亡率降至 1% 以下', risks: '医疗挤兑、变异毒株、防控疲劳' }, 'aging_001': { desc: '研究老龄化社会对养老金系统、劳动力供给和经济增长的长期影响', focus: '抚养比、养老金可持续性、劳动力增长率、人均 GDP', goals: '养老金可持续性>80%，抚养比控制在 0.4', risks: '劳动力短缺、养老金缺口、经济增速放缓' },
     'biz_001': { desc: '我们计划推出一款新产品/服务，目标市场为[请填写目标人群]，定价约[X]元，主打[核心卖点]。', focus: '市场渗透率、用户增长率、客户满意度、利润率、复购率', goals: '上线6个月内获得[X]名付费用户，月营收突破[X]万元', risks: '竞品模仿、获客成本过高、用户留存不足' },
     'biz_002': { desc: '我们正在对比两种营销策略：[策略A] vs [策略B]，预算各[X]万元。', focus: '转化率、客户获取成本(CAC)、品牌知名度、ROI', goals: 'ROI达到3倍以上，单个获客成本控制在[X]元以内', risks: '预算浪费、渠道效果不达预期' },
     'biz_003': { desc: '公司正在进行[数字化转型/组织架构调整]，涉及[X]名员工。', focus: '员工满意度、离职率、生产率、变革接受度', goals: '变革后生产率提升20%，员工满意度>70分', risks: '员工抵触、关键人才流失' },
@@ -677,8 +683,8 @@ function loadRecentExps() {
 // 实验控制台: 模板
 // ============================================================
 function loadTemplates() {
-    fetch('/api/v1/templates').then(r => r.json()).then(data => {
-        templates = data.templates || [];
+    fetch('/api/v1/experiments/templates').then(r => r.json()).then(data => {
+        templates = (data.data && data.data.templates) || data.templates || [];
         renderFilters();
         renderTemplates(templates);
     }).catch(() => {

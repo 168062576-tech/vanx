@@ -49,11 +49,19 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from deep_integration_engine import DeepIntegrationEngine
 from experiment_templates_v2 import ExperimentTemplateLibrary
 from narrative_engine import NarrativeEngine
-from report_generator_v2 import SmartReportGenerator
 from storage import SQLiteStore
 from experiment_report_generator import ExperimentReportGenerator
 from experiment_runner import ExperimentRunner, ExperimentStatus
-from multi_world_experiment import MultiWorldExperiment
+
+# 商业模块（开源版本缺失不影响核心运行）
+try:
+    from report_generator_v2 import SmartReportGenerator
+except ImportError:
+    SmartReportGenerator = None
+try:
+    from multi_world_experiment import MultiWorldExperiment
+except ImportError:
+    MultiWorldExperiment = None
 
 # ============ 结构化日志 ============
 def setup_logging():
@@ -152,7 +160,10 @@ def init_engine(count=None):
         count = INITIAL_AGENT_COUNT
     engine = DeepIntegrationEngine()
     template_library = ExperimentTemplateLibrary()
-    smart_reporter = SmartReportGenerator(output_path=DATA_DIR)
+    if SmartReportGenerator:
+        smart_reporter = SmartReportGenerator(output_path=DATA_DIR)
+    else:
+        smart_reporter = None
     excel_reporter = ExperimentReportGenerator(output_dir=DATA_DIR)
     experiment_runner = ExperimentRunner()
 
@@ -709,12 +720,13 @@ def load_state():
 
 
 @app.route(f'/api/{API_VERSION}/experiments/templates', methods=['GET'])
-@require_api_key
 def list_templates():
     """获取实验模板列表"""
     try:
         category = request.args.get('category', None)
+        print(f"[DEBUG] template_library = {template_library}, templates count = {len(template_library.templates)}")
         templates = template_library.list_templates(category)
+        print(f"[DEBUG] Returning {len(templates)} templates for category={category}")
         templates_data = []
         for t in templates:
             templates_data.append({
@@ -742,7 +754,6 @@ def list_templates():
 
 
 @app.route(f'/api/{API_VERSION}/experiments/templates/<template_id>', methods=['GET'])
-@require_api_key
 def get_template(template_id):
     """获取模板详情"""
     try:
@@ -2655,7 +2666,6 @@ def get_agent_finance(agent_id):
 
 
 @app.route(f'/api/{API_VERSION}/templates', methods=['GET'])
-@require_api_key
 def list_templates_alias():
     """获取实验模板列表（/api/v1/templates 别名，兼容前端）"""
     try:
