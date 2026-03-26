@@ -1,0 +1,478 @@
+{
+  "strategies": {
+    "A_full_open": {
+      "name": "全开源（26 子系统）",
+      "open_subsystems": 26,
+      "paid_subsystems": 0,
+      "user_acquisition_rate": 0.8,
+      "conversion_rate": 0.02,
+      "competition_risk": 0.9,
+      "community_contribution": 0.7
+    },
+    "B_core_open": {
+      "name": "核心开源（8 子系统）",
+      "open_subsystems": 8,
+      "paid_subsystems": 18,
+      "user_acquisition_rate": 0.6,
+      "conversion_rate": 0.08,
+      "competition_risk": 0.5,
+      "community_contribution": 0.5
+    },
+    "C_conservative": {
+      "name": "保守开源（5 子系统）",
+      "open_subsystems": 5,
+      "paid_subsystems": 21,
+      "user_acquisition_rate": 0.3,
+      "conversion_rate": 0.15,
+      "competition_risk": 0.3,
+      "community_contribution": 0.2
+    },
+    "D_closed": {
+      "name": "不开源（传统商业）",
+      "open_subsystems": 0,
+      "paid_subsystems": 26,
+      "user_acquisition_rate": 0.1,
+      "conversion_rate": 0.25,
+      "competition_risk": 0.1,
+      "community_contribution": 0.0
+    }
+  },
+  "monthly_data": {
+    "A_full_open": [
+      {
+        "month": 1,
+        "users": 920,
+        "paid": 18,
+        "revenue": 522,
+        "cumulative_revenue": 522
+      },
+      {
+        "month": 2,
+        "users": 1977,
+        "paid": 39,
+        "revenue": 1131,
+        "cumulative_revenue": 1653
+      },
+      {
+        "month": 3,
+        "users": 3193,
+        "paid": 63,
+        "revenue": 1827,
+        "cumulative_revenue": 3480
+      },
+      {
+        "month": 4,
+        "users": 4592,
+        "paid": 91,
+        "revenue": 2639,
+        "cumulative_revenue": 6119
+      },
+      {
+        "month": 5,
+        "users": 6201,
+        "paid": 124,
+        "revenue": 3596,
+        "cumulative_revenue": 9715
+      },
+      {
+        "month": 6,
+        "users": 7496,
+        "paid": 149,
+        "revenue": 4321,
+        "cumulative_revenue": 14036
+      },
+      {
+        "month": 7,
+        "users": 8985,
+        "paid": 179,
+        "revenue": 5191,
+        "cumulative_revenue": 19227
+      },
+      {
+        "month": 8,
+        "users": 10698,
+        "paid": 213,
+        "revenue": 6177,
+        "cumulative_revenue": 25404
+      },
+      {
+        "month": 9,
+        "users": 12668,
+        "paid": 253,
+        "revenue": 7337,
+        "cumulative_revenue": 32741
+      },
+      {
+        "month": 10,
+        "users": 14933,
+        "paid": 298,
+        "revenue": 8642,
+        "cumulative_revenue": 41383
+      },
+      {
+        "month": 11,
+        "users": 17538,
+        "paid": 350,
+        "revenue": 10150,
+        "cumulative_revenue": 51533
+      },
+      {
+        "month": 12,
+        "users": 20534,
+        "paid": 410,
+        "revenue": 11890,
+        "cumulative_revenue": 63423
+      }
+    ],
+    "B_core_open": [
+      {
+        "month": 1,
+        "users": 689,
+        "paid": 55,
+        "revenue": 1595,
+        "cumulative_revenue": 1595
+      },
+      {
+        "month": 2,
+        "users": 1482,
+        "paid": 118,
+        "revenue": 3422,
+        "cumulative_revenue": 5017
+      },
+      {
+        "month": 3,
+        "users": 2394,
+        "paid": 191,
+        "revenue": 5539,
+        "cumulative_revenue": 10556
+      },
+      {
+        "month": 4,
+        "users": 3443,
+        "paid": 275,
+        "revenue": 7975,
+        "cumulative_revenue": 18531
+      },
+      {
+        "month": 5,
+        "users": 4649,
+        "paid": 371,
+        "revenue": 10759,
+        "cumulative_revenue": 29290
+      },
+      {
+        "month": 6,
+        "users": 5620,
+        "paid": 449,
+        "revenue": 13021,
+        "cumulative_revenue": 42311
+      },
+      {
+        "month": 7,
+        "users": 6737,
+        "paid": 538,
+        "revenue": 15602,
+        "cumulative_revenue": 57913
+      },
+      {
+        "month": 8,
+        "users": 8021,
+        "paid": 641,
+        "revenue": 18589,
+        "cumulative_revenue": 76502
+      },
+      {
+        "month": 9,
+        "users": 9498,
+        "paid": 759,
+        "revenue": 22011,
+        "cumulative_revenue": 98513
+      },
+      {
+        "month": 10,
+        "users": 11197,
+        "paid": 895,
+        "revenue": 25955,
+        "cumulative_revenue": 124468
+      },
+      {
+        "month": 11,
+        "users": 13151,
+        "paid": 1052,
+        "revenue": 30508,
+        "cumulative_revenue": 154976
+      },
+      {
+        "month": 12,
+        "users": 15398,
+        "paid": 1231,
+        "revenue": 35699,
+        "cumulative_revenue": 190675
+      }
+    ],
+    "C_conservative": [
+      {
+        "month": 1,
+        "users": 344,
+        "paid": 51,
+        "revenue": 1479,
+        "cumulative_revenue": 1479
+      },
+      {
+        "month": 2,
+        "users": 740,
+        "paid": 111,
+        "revenue": 3219,
+        "cumulative_revenue": 4698
+      },
+      {
+        "month": 3,
+        "users": 1196,
+        "paid": 179,
+        "revenue": 5191,
+        "cumulative_revenue": 9889
+      },
+      {
+        "month": 4,
+        "users": 1720,
+        "paid": 258,
+        "revenue": 7482,
+        "cumulative_revenue": 17371
+      },
+      {
+        "month": 5,
+        "users": 2323,
+        "paid": 348,
+        "revenue": 10092,
+        "cumulative_revenue": 27463
+      },
+      {
+        "month": 6,
+        "users": 2808,
+        "paid": 421,
+        "revenue": 12209,
+        "cumulative_revenue": 39672
+      },
+      {
+        "month": 7,
+        "users": 3366,
+        "paid": 504,
+        "revenue": 14616,
+        "cumulative_revenue": 54288
+      },
+      {
+        "month": 8,
+        "users": 4008,
+        "paid": 601,
+        "revenue": 17429,
+        "cumulative_revenue": 71717
+      },
+      {
+        "month": 9,
+        "users": 4746,
+        "paid": 711,
+        "revenue": 20619,
+        "cumulative_revenue": 92336
+      },
+      {
+        "month": 10,
+        "users": 5595,
+        "paid": 839,
+        "revenue": 24331,
+        "cumulative_revenue": 116667
+      },
+      {
+        "month": 11,
+        "users": 6572,
+        "paid": 985,
+        "revenue": 28565,
+        "cumulative_revenue": 145232
+      },
+      {
+        "month": 12,
+        "users": 7695,
+        "paid": 1154,
+        "revenue": 33466,
+        "cumulative_revenue": 178698
+      }
+    ],
+    "D_closed": [
+      {
+        "month": 1,
+        "users": 115,
+        "paid": 28,
+        "revenue": 812,
+        "cumulative_revenue": 812
+      },
+      {
+        "month": 2,
+        "users": 247,
+        "paid": 61,
+        "revenue": 1769,
+        "cumulative_revenue": 2581
+      },
+      {
+        "month": 3,
+        "users": 399,
+        "paid": 99,
+        "revenue": 2871,
+        "cumulative_revenue": 5452
+      },
+      {
+        "month": 4,
+        "users": 573,
+        "paid": 143,
+        "revenue": 4147,
+        "cumulative_revenue": 9599
+      },
+      {
+        "month": 5,
+        "users": 774,
+        "paid": 193,
+        "revenue": 5597,
+        "cumulative_revenue": 15196
+      },
+      {
+        "month": 6,
+        "users": 935,
+        "paid": 233,
+        "revenue": 6757,
+        "cumulative_revenue": 21953
+      },
+      {
+        "month": 7,
+        "users": 1121,
+        "paid": 280,
+        "revenue": 8120,
+        "cumulative_revenue": 30073
+      },
+      {
+        "month": 8,
+        "users": 1335,
+        "paid": 333,
+        "revenue": 9657,
+        "cumulative_revenue": 39730
+      },
+      {
+        "month": 9,
+        "users": 1581,
+        "paid": 395,
+        "revenue": 11455,
+        "cumulative_revenue": 51185
+      },
+      {
+        "month": 10,
+        "users": 1864,
+        "paid": 466,
+        "revenue": 13514,
+        "cumulative_revenue": 64699
+      },
+      {
+        "month": 11,
+        "users": 2189,
+        "paid": 547,
+        "revenue": 15863,
+        "cumulative_revenue": 80562
+      },
+      {
+        "month": 12,
+        "users": 2563,
+        "paid": 640,
+        "revenue": 18560,
+        "cumulative_revenue": 99122
+      }
+    ]
+  },
+  "final_state": {
+    "A_full_open": {
+      "strategy": {
+        "name": "全开源（26 子系统）",
+        "open_subsystems": 26,
+        "paid_subsystems": 0,
+        "user_acquisition_rate": 0.8,
+        "conversion_rate": 0.02,
+        "competition_risk": 0.9,
+        "community_contribution": 0.7
+      },
+      "total_users": 20534,
+      "paid_users": 410,
+      "monthly_revenue": 11890,
+      "cumulative_revenue": 63423,
+      "community_contributions": 72,
+      "imitation_risk": 0.5399999999999999,
+      "month": 12
+    },
+    "B_core_open": {
+      "strategy": {
+        "name": "核心开源（8 子系统）",
+        "open_subsystems": 8,
+        "paid_subsystems": 18,
+        "user_acquisition_rate": 0.6,
+        "conversion_rate": 0.08,
+        "competition_risk": 0.5,
+        "community_contribution": 0.5
+      },
+      "total_users": 15398,
+      "paid_users": 1231,
+      "monthly_revenue": 35699,
+      "cumulative_revenue": 190675,
+      "community_contributions": 35,
+      "imitation_risk": 0.3,
+      "month": 12
+    },
+    "C_conservative": {
+      "strategy": {
+        "name": "保守开源（5 子系统）",
+        "open_subsystems": 5,
+        "paid_subsystems": 21,
+        "user_acquisition_rate": 0.3,
+        "conversion_rate": 0.15,
+        "competition_risk": 0.3,
+        "community_contribution": 0.2
+      },
+      "total_users": 7695,
+      "paid_users": 1154,
+      "monthly_revenue": 33466,
+      "cumulative_revenue": 178698,
+      "community_contributions": 3,
+      "imitation_risk": 0.18000000000000005,
+      "month": 12
+    },
+    "D_closed": {
+      "strategy": {
+        "name": "不开源（传统商业）",
+        "open_subsystems": 0,
+        "paid_subsystems": 26,
+        "user_acquisition_rate": 0.1,
+        "conversion_rate": 0.25,
+        "competition_risk": 0.1,
+        "community_contribution": 0.0
+      },
+      "total_users": 2563,
+      "paid_users": 640,
+      "monthly_revenue": 18560,
+      "cumulative_revenue": 99122,
+      "community_contributions": 0,
+      "imitation_risk": 0.060000000000000026,
+      "month": 12
+    }
+  },
+  "ranking": [
+    [
+      "A_full_open",
+      164.8823
+    ],
+    [
+      "B_core_open",
+      146.54749999999999
+    ],
+    [
+      "C_conservative",
+      77.1198
+    ],
+    [
+      "D_closed",
+      29.542199999999998
+    ]
+  ]
+}

@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报告生成 - 御龙军虚拟 Agent 世界</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+        /* ---- Reports Page Layout ---- */
+        .reports-header {
+            background: linear-gradient(135deg, var(--purple), var(--violet));
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .reports-header h1 {
+            font-size: 1.3em;
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: rgba(255, 255, 255, .85);
+            text-decoration: none;
+            font-size: .88em;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, .25);
+            background: rgba(255, 255, 255, .08);
+            transition: all .2s;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, .18);
+            border-color: rgba(255, 255, 255, .45);
+            color: #fff;
+        }
+
+        .reports-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* ---- Card Styling ---- */
+        .rpt-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: .3s;
+        }
+
+        .rpt-card:hover {
+            border-color: rgba(102, 126, 234, .35);
+        }
+
+        .rpt-card-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, .08), rgba(118, 75, 162, .04));
+        }
+
+        .rpt-card-header h2 {
+            font-size: .95em;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .rpt-card-header .icon {
+            font-size: 1.2em;
+        }
+
+        .rpt-card-body {
+            padding: 18px;
+        }
+
+        /* ---- Full-width cards ---- */
+        .rpt-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* ---- Section Title ---- */
+        .section-label {
+            font-size: .78em;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-bottom: 10px;
+        }
+
+        /* ---- World Selector ---- */
+        .world-select-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .world-select-row label {
+            font-size: .88em;
+            color: var(--text2);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .world-select-row select {
+            flex: 1;
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 9px 12px;
+            color: var(--text);
+            font-size: .88em;
+            outline: none;
+            transition: .2s;
+            cursor: pointer;
+        }
+
+        .world-select-row select:focus {
+            border-color: var(--purple);
+            box-shadow: 0 0 10px rgba(102, 126, 234, .2);
+        }
+
+        .world-select-row select option {
+            background: var(--bg2);
+            color: var(--text);
+        }
+
+        /* ---- Format Grid (Report Type) ---- */
+        .format-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .format-option {
+            cursor: pointer;
+        }
+
+        .format-option input {
+            display: none;
+        }
+
+        .format-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 16px 10px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: transparent;
+            transition: all .25s;
+        }
+
+        .format-card:hover {
+            border-color: var(--purple);
+            background: rgba(102, 126, 234, .06);
+        }
+
+        .format-option input:checked + .format-card {
+            border-color: var(--purple);
+            background: rgba(102, 126, 234, .12);
+            box-shadow: 0 0 14px rgba(102, 126, 234, .18);
+        }
+
+        .format-card .fmt-icon {
+            font-size: 2em;
+        }
+
+        .format-card .fmt-name {
+            font-size: .88em;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .format-card .fmt-desc {
+            font-size: .72em;
+            color: var(--muted);
+            text-align: center;
+            line-height: 1.35;
+        }
+
+        /* ---- Level Grid (Smart Report Level) ---- */
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 0;
+        }
+
+        .level-option {
+            cursor: pointer;
+        }
+
+        .level-option input {
+            display: none;
+        }
+
+        .level-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 16px 10px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: transparent;
+            transition: all .25s;
+            text-align: center;
+        }
+
+        .level-card:hover {
+            border-color: var(--pink);
+            background: rgba(232, 67, 147, .06);
+        }
+
+        .level-option input:checked + .level-card {
+            border-color: var(--pink);
+            background: rgba(232, 67, 147, .12);
+            box-shadow: 0 0 14px rgba(232, 67, 147, .18);
+        }
+
+        .level-card .lvl-icon {
+            font-size: 1.8em;
+        }
+
+        .level-card .lvl-name {
+            font-size: .88em;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .level-card .lvl-desc {
+            font-size: .7em;
+            color: var(--muted);
+            line-height: 1.35;
+        }
+
+        /* ---- Content Checkboxes ---- */
+        .content-checks {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .content-check {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: .84em;
+            color: var(--text2);
+            cursor: pointer;
+            transition: .2s;
+            border: 1px solid transparent;
+        }
+
+        .content-check:hover {
+            background: rgba(255, 255, 255, .04);
+            border-color: var(--border);
+        }
+
+        .content-check input {
+            accent-color: var(--purple);
+            width: 15px;
+            height: 15px;
+            cursor: pointer;
+        }
+
+        .content-check input:checked ~ span {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        /* ---- Generate Buttons ---- */
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn-generate {
+            flex: 1;
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: none;
+            font-size: .95em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-generate.primary {
+            background: linear-gradient(135deg, var(--purple), var(--violet));
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, .3);
+        }
+
+        .btn-generate.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(102, 126, 234, .45);
+        }
+
+        .btn-generate.secondary {
+            background: linear-gradient(135deg, var(--pink), var(--violet));
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(232, 67, 147, .3);
+        }
+
+        .btn-generate.secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(232, 67, 147, .45);
+        }
+
+        .btn-generate:disabled {
+            opacity: .6;
+            pointer-events: none;
+            transform: none !important;
+        }
+
+        /* ---- Result Toast ---- */
+        .result-toast {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            font-size: .85em;
+            line-height: 1.5;
+            display: none;
+            animation: toastIn .3s ease-out;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-toast.success {
+            background: rgba(0, 184, 148, .12);
+            border: 1px solid rgba(0, 184, 148, .3);
+            color: var(--green);
+        }
+
+        .result-toast.error {
+            background: rgba(231, 76, 60, .12);
+            border: 1px solid rgba(231, 76, 60, .3);
+            color: #e74c3c;
+        }
+
+        .result-toast.loading {
+            background: rgba(102, 126, 234, .1);
+            border: 1px solid rgba(102, 126, 234, .25);
+            color: var(--purple);
+        }
+
+        .result-toast a {
+            color: inherit;
+            font-weight: 700;
+            text-decoration: underline;
+        }
+
+        /* ---- Report File List ---- */
+        .file-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .file-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--muted);
+        }
+
+        .file-empty .empty-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, .03);
+            transition: .2s;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-item:hover {
+            background: rgba(102, 126, 234, .05);
+        }
+
+        .file-icon {
+            font-size: 1.5em;
+            flex-shrink: 0;
+            width: 36px;
+            text-align: center;
+        }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-size: .85em;
+            font-weight: 600;
+            color: var(--text);
+            word-break: break-all;
+        }
+
+        .file-meta {
+            font-size: .72em;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .file-btn {
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text2);
+            font-size: .75em;
+            cursor: pointer;
+            transition: .2s;
+            white-space: nowrap;
+        }
+
+        .file-btn:hover {
+            border-color: var(--purple);
+            color: var(--purple);
+            background: rgba(102, 126, 234, .08);
+        }
+
+        .file-btn.download {
+            border-color: rgba(0, 184, 148, .3);
+            color: var(--green);
+        }
+
+        .file-btn.download:hover {
+            background: rgba(0, 184, 148, .1);
+            border-color: var(--green);
+        }
+
+        /* ---- Refresh List Button ---- */
+        .refresh-list-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 12px;
+            background: linear-gradient(135deg, var(--purple), var(--violet));
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: .85em;
+            font-weight: 600;
+            transition: .3s;
+        }
+
+        .refresh-list-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, .35);
+        }
+
+        /* ---- Loading spinner ---- */
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, .3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: sp .7s linear infinite;
+        }
+
+        /* ---- Responsive ---- */
+        @media (max-width: 900px) {
+            .reports-container {
+                grid-template-columns: 1fr;
+                padding: 16px;
+            }
+            .format-grid,
+            .level-grid {
+                grid-template-columns: 1fr;
+            }
+            .content-checks {
+                grid-template-columns: 1fr;
+            }
+            .btn-row {
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .reports-header {
+                padding: 12px 16px;
+            }
+            .reports-header h1 {
+                font-size: 1.05em;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- Header -->
+<!-- ============================================================ -->
+<div class="reports-header">
+    <h1>📊 报告生成系统</h1>
+    <nav class="header-nav" style="display:flex;gap:8px;align-items:center">
+        <a href="/" class="nav-btn">🌍 世界地图</a>
+        <a href="/dashboard" class="nav-btn">📊 仪表盘</a>
+        <a href="/console" class="nav-btn">🎮 控制台</a>
+        <a href="/demo" class="nav-btn">🎬 演示</a>
+        <a href="/reports" class="nav-btn active">📊 报告</a>
+    </nav>
+</div>
+
+<!-- ============================================================ -->
+<!-- Main Content -->
+<!-- ============================================================ -->
+<div class="reports-container">
+
+    <!-- ======== Card 1: 报告类型选择 ======== -->
+    <div class="rpt-card">
+        <div class="rpt-card-header">
+            <span class="icon">📄</span>
+            <h2>报告类型</h2>
+        </div>
+        <div class="rpt-card-body">
+            <div class="section-label">选择输出格式</div>
+            <div class="format-grid">
+                <label class="format-option">
+                    <input type="radio" name="reportFormat" value="html" checked>
+                    <div class="format-card">
+                        <span class="fmt-icon">📊</span>
+                        <span class="fmt-name">HTML 可视化</span>
+                        <span class="fmt-desc">带 Chart.js 图表<br>独立 HTML 文件</span>
+                    </div>
+                </label>
+                <label class="format-option">
+                    <input type="radio" name="reportFormat" value="json">
+                    <div class="format-card">
+                        <span class="fmt-icon">🔧</span>
+                        <span class="fmt-name">JSON 数据</span>
+                        <span class="fmt-desc">结构化数据<br>适合程序处理</span>
+                    </div>
+                </label>
+                <label class="format-option">
+                    <input type="radio" name="reportFormat" value="markdown">
+                    <div class="format-card">
+                        <span class="fmt-icon">📝</span>
+                        <span class="fmt-name">Markdown 文本</span>
+                        <span class="fmt-desc">纯文本报告<br>易于阅读分享</span>
+                    </div>
+                </label>
+            </div>
+
+            <div class="section-label">选择世界</div>
+            <div class="world-select-row">
+                <label for="worldSelect">🌍</label>
+                <select id="worldSelect">
+                    <option value="world_alpha">🌐 主世界 Alpha</option>
+                    <option value="world_alpha_global">🌏 Alpha Global</option>
+                    <option value="world_alpha_v3">🧪 V3 实验世界</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======== Card 2: 智能报告级别 ======== -->
+    <div class="rpt-card">
+        <div class="rpt-card-header">
+            <span class="icon">🧠</span>
+            <h2>智能报告级别</h2>
+        </div>
+        <div class="rpt-card-body">
+            <div class="section-label">选择受众级别</div>
+            <div class="level-grid">
+                <label class="level-option">
+                    <input type="radio" name="reportLevel" value="executive" checked>
+                    <div class="level-card">
+                        <span class="lvl-icon">👔</span>
+                        <span class="lvl-name">Executive</span>
+                        <span class="lvl-desc">执行摘要<br>适合领导层决策</span>
+                    </div>
+                </label>
+                <label class="level-option">
+                    <input type="radio" name="reportLevel" value="business">
+                    <div class="level-card">
+                        <span class="lvl-icon">💼</span>
+                        <span class="lvl-name">Business</span>
+                        <span class="lvl-desc">商业分析<br>适合客户汇报</span>
+                    </div>
+                </label>
+                <label class="level-option">
+                    <input type="radio" name="reportLevel" value="technical">
+                    <div class="level-card">
+                        <span class="lvl-icon">🛠️</span>
+                        <span class="lvl-name">Technical</span>
+                        <span class="lvl-desc">技术详情<br>适合开发者分析</span>
+                    </div>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======== Card 3: 报告内容勾选 ======== -->
+    <div class="rpt-card full-width">
+        <div class="rpt-card-header">
+            <span class="icon">☑️</span>
+            <h2>报告内容</h2>
+        </div>
+        <div class="rpt-card-body">
+            <div class="section-label">选择要包含的数据模块</div>
+            <div class="content-checks">
+                <label class="content-check">
+                    <input type="checkbox" checked data-content="demographics">
+                    <span>👥 人口统计</span>
+                </label>
+                <label class="content-check">
+                    <input type="checkbox" checked data-content="economy">
+                    <span>💰 经济数据</span>
+                </label>
+                <label class="content-check">
+                    <input type="checkbox" checked data-content="occupation">
+                    <span>💼 职业分布</span>
+                </label>
+                <label class="content-check">
+                    <input type="checkbox" data-content="events">
+                    <span>📰 事件统计</span>
+                </label>
+                <label class="content-check">
+                    <input type="checkbox" data-content="health">
+                    <span>🏥 健康数据</span>
+                </label>
+                <label class="content-check">
+                    <input type="checkbox" data-content="social">
+                    <span>🤝 社会数据</span>
+                </label>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="btn-row">
+                <button class="btn-generate primary" id="btnGenerate" onclick="generateReport()">
+                    📥 生成标准报告
+                </button>
+                <button class="btn-generate secondary" id="btnSmart" onclick="generateSmartReport()">
+                    🧠 生成智能报告
+                </button>
+            </div>
+            <div class="btn-row">
+                <button class="btn-generate primary" id="btnExcel" onclick="downloadExcelReport()" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                    📗 下载 Excel 报告
+                </button>
+                <button class="btn-generate secondary" id="btnCsv" onclick="downloadCsvReport()" style="background: linear-gradient(135deg, #2980b9, #3498db);">
+                    📄 下载 CSV 数据
+                </button>
+            </div>
+
+            <!-- Result Toast -->
+            <div class="result-toast" id="resultToast"></div>
+        </div>
+    </div>
+
+    <!-- ======== Card 4: 已生成报告列表 ======== -->
+    <div class="rpt-card full-width">
+        <div class="rpt-card-header">
+            <span class="icon">📂</span>
+            <h2>已生成报告</h2>
+            <span style="margin-left:auto;font-size:.75em;color:var(--muted)" id="fileCount">--</span>
+        </div>
+        <div class="rpt-card-body">
+            <div class="file-list" id="fileList">
+                <div class="file-empty">
+                    <div class="empty-icon">📭</div>
+                    <div>加载中...</div>
+                </div>
+            </div>
+            <button class="refresh-list-btn" onclick="loadReportList()">🔄 刷新列表</button>
+        </div>
+    </div>
+
+</div>
+
+<!-- ============================================================ -->
+<!-- JavaScript -->
+<!-- ============================================================ -->
+<script>
+    // ---- Helpers ----
+    function getSelectedFormat() {
+        const el = document.querySelector('input[name="reportFormat"]:checked');
+        return el ? el.value : 'html';
+    }
+
+    function getSelectedLevel() {
+        const el = document.querySelector('input[name="reportLevel"]:checked');
+        return el ? el.value : 'executive';
+    }
+
+    function getSelectedWorld() {
+        return document.getElementById('worldSelect').value;
+    }
+
+    function getSelectedContent() {
+        const checks = document.querySelectorAll('.content-checks input[type="checkbox"]');
+        const selected = [];
+        checks.forEach(cb => {
+            if (cb.checked) selected.push(cb.dataset.content);
+        });
+        return selected;
+    }
+
+    function showResult(type, html) {
+        const el = document.getElementById('resultToast');
+        el.className = 'result-toast ' + type;
+        el.innerHTML = html;
+        el.style.display = 'block';
+    }
+
+    function hideResult() {
+        document.getElementById('resultToast').style.display = 'none';
+    }
+
+    function setButtonLoading(btnId, loading) {
+        const btn = document.getElementById(btnId);
+        if (loading) {
+            btn.disabled = true;
+            btn._origHTML = btn.innerHTML;
+            btn.innerHTML = '<span class="loading-spinner"></span> 生成中...';
+        } else {
+            btn.disabled = false;
+            if (btn._origHTML) btn.innerHTML = btn._origHTML;
+        }
+    }
+
+    function getFileIcon(filename) {
+        if (filename.endsWith('.html')) return '📊';
+        if (filename.endsWith('.json')) return '🔧';
+        if (filename.endsWith('.md'))   return '📝';
+        if (filename.endsWith('.xlsx')) return '📗';
+        if (filename.endsWith('.csv'))  return '📄';
+        return '📎';
+    }
+
+    function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '--';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function formatDate(ts) {
+        if (!ts) return '--';
+        const d = new Date(ts);
+        if (isNaN(d.getTime())) return ts;
+        return d.toLocaleString('zh-CN', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit'
+        });
+    }
+
+    // ---- World List (hardcoded — no backend /api/worlds endpoint) ----
+    function loadWorldList() {
+        // World list is hardcoded in the <select> element.
+        // No API call needed — the backend has no /api/worlds endpoint.
+    }
+
+    // ---- Generate Standard Report ----
+    async function generateReport() {
+        hideResult();
+        setButtonLoading('btnGenerate', true);
+
+        const payload = {
+            world: getSelectedWorld(),
+            type: getSelectedFormat(),
+            content: getSelectedContent()
+        };
+
+        try {
+            const resp = await fetch('/api/v1/reports/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': 'yulong-dev-key'
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+
+            if (data.success) {
+                let html = '✅ 报告生成成功！';
+                if (data.file) {
+                    const fname = data.file.split(/[/\\]/).pop();
+                    html += `<br>📄 文件：<strong>${fname}</strong>`;
+                }
+                if (data.download_url) {
+                    html += `<br><a href="${data.download_url}" target="_blank">📥 下载报告</a>`;
+                } else if (data.file) {
+                    const fname = data.file.split(/[/\\]/).pop();
+                    html += `<br><a href="/reports/download/${encodeURIComponent(fname)}" target="_blank">📥 下载报告</a>`;
+                }
+                showResult('success', html);
+                loadReportList();
+            } else {
+                showResult('error', '❌ 生成失败：' + (data.error || '未知错误'));
+            }
+        } catch (err) {
+            showResult('error', '❌ 请求失败：' + err.message);
+        } finally {
+            setButtonLoading('btnGenerate', false);
+        }
+    }
+
+    // ---- Generate Smart Report ----
+    async function generateSmartReport() {
+        hideResult();
+        setButtonLoading('btnSmart', true);
+
+        const payload = {
+            world: getSelectedWorld(),
+            type: getSelectedFormat(),
+            level: getSelectedLevel(),
+            content: getSelectedContent()
+        };
+
+        try {
+            const resp = await fetch('/api/v1/reports/smart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': 'yulong-dev-key'
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+
+            if (data.success) {
+                let html = '✅ 智能报告生成成功！';
+                html += `<br>📋 级别：<strong>${payload.level.toUpperCase()}</strong>`;
+                if (data.file) {
+                    const fname = data.file.split(/[/\\]/).pop();
+                    html += `<br>📄 文件：<strong>${fname}</strong>`;
+                }
+                if (data.download_url) {
+                    html += `<br><a href="${data.download_url}" target="_blank">📥 下载报告</a>`;
+                } else if (data.file) {
+                    const fname2 = data.file.split(/[/\\]/).pop();
+                    html += `<br><a href="/reports/download/${encodeURIComponent(fname2)}" target="_blank">📥 下载报告</a>`;
+                }
+                showResult('success', html);
+                loadReportList();
+            } else {
+                showResult('error', '❌ 智能报告生成失败：' + (data.error || '未知错误'));
+            }
+        } catch (err) {
+            showResult('error', '❌ 请求失败：' + err.message);
+        } finally {
+            setButtonLoading('btnSmart', false);
+        }
+    }
+
+    // ---- Download Excel Report ----
+    async function downloadExcelReport() {
+        hideResult();
+        setButtonLoading('btnExcel', true);
+
+        const payload = {
+            world: getSelectedWorld()
+        };
+
+        try {
+            const resp = await fetch('/api/v1/reports/excel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': 'yulong-dev-key'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({}));
+                showResult('error', '❌ Excel 生成失败：' + (errData.error || `HTTP ${resp.status}`));
+                return;
+            }
+
+            // 下载文件
+            const blob = await resp.blob();
+            const disposition = resp.headers.get('Content-Disposition') || '';
+            let filename = 'report.xlsx';
+            const match = disposition.match(/filename[*]?=(?:UTF-8'')?([^;\n]+)/i);
+            if (match) filename = decodeURIComponent(match[1].replace(/["']/g, ''));
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showResult('success', `✅ Excel 报告已下载：<strong>${filename}</strong>`);
+            loadReportList();
+        } catch (err) {
+            showResult('error', '❌ 请求失败：' + err.message);
+        } finally {
+            setButtonLoading('btnExcel', false);
+        }
+    }
+
+    // ---- Download CSV Report ----
+    async function downloadCsvReport() {
+        hideResult();
+        setButtonLoading('btnCsv', true);
+
+        const payload = {
+            world: getSelectedWorld()
+        };
+
+        try {
+            const resp = await fetch('/api/v1/reports/csv', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': 'yulong-dev-key'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({}));
+                showResult('error', '❌ CSV 导出失败：' + (errData.error || `HTTP ${resp.status}`));
+                return;
+            }
+
+            // 下载文件
+            const blob = await resp.blob();
+            const disposition = resp.headers.get('Content-Disposition') || '';
+            let filename = 'export.csv';
+            const match = disposition.match(/filename[*]?=(?:UTF-8'')?([^;\n]+)/i);
+            if (match) filename = decodeURIComponent(match[1].replace(/["']/g, ''));
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showResult('success', `✅ CSV 数据已下载：<strong>${filename}</strong>`);
+            loadReportList();
+        } catch (err) {
+            showResult('error', '❌ 请求失败：' + err.message);
+        } finally {
+            setButtonLoading('btnCsv', false);
+        }
+    }
+
+    // ---- Load Report List ----
+    async function loadReportList() {
+        const listEl = document.getElementById('fileList');
+        const countEl = document.getElementById('fileCount');
+
+        try {
+            const resp = await fetch('/api/v1/reports/list', {
+                headers: { 'X-API-Key': 'yulong-dev-key' }
+            });
+            const data = await resp.json();
+
+            // API 返回 { success, data: { reports: [...] } }
+            const files = (data.data && data.data.reports) || data.files || [];
+
+            if (!files || files.length === 0) {
+                listEl.innerHTML = `
+                    <div class="file-empty">
+                        <div class="empty-icon">📭</div>
+                        <div>暂无报告文件</div>
+                        <div style="font-size:.8em;margin-top:6px;color:var(--muted)">生成报告后将在此显示</div>
+                    </div>`;
+                countEl.textContent = '0 个文件';
+                return;
+            }
+
+            countEl.textContent = files.length + ' 个文件';
+
+            listEl.innerHTML = files.map(f => {
+                const name = f.name || f.filename || f;
+                const size = f.size_bytes || f.size ? formatFileSize(f.size_bytes || f.size) : '';
+                const date = f.created || f.modified || f.date || '';
+                const icon = getFileIcon(name);
+                const filePath = f.path || f.file || name;
+
+                const viewUrl = name.endsWith('.html')
+                    ? `/reports/view/${encodeURIComponent(name)}`
+                    : null;
+                const downloadUrl = `/reports/download/${encodeURIComponent(name)}`;
+
+                return `
+                    <div class="file-item">
+                        <div class="file-icon">${icon}</div>
+                        <div class="file-info">
+                            <div class="file-name">${name}</div>
+                            <div class="file-meta">${[formatDate(date), size].filter(Boolean).join(' · ')}</div>
+                        </div>
+                        <div class="file-actions">
+                            ${viewUrl ? `<a class="file-btn" href="${viewUrl}" target="_blank">👁 查看</a>` : ''}
+                            <a class="file-btn download" href="${downloadUrl}" download>📥 下载</a>
+                        </div>
+                    </div>`;
+            }).join('');
+
+        } catch (err) {
+            listEl.innerHTML = `
+                <div class="file-empty">
+                    <div class="empty-icon">⚠️</div>
+                    <div>加载失败</div>
+                    <div style="font-size:.8em;margin-top:6px;color:var(--muted)">${err.message}</div>
+                </div>`;
+            countEl.textContent = '--';
+        }
+    }
+
+    // ---- Init ----
+    document.addEventListener('DOMContentLoaded', () => {
+        loadWorldList();
+        loadReportList();
+    });
+</script>
+
+</body>
+</html>

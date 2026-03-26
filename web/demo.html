@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>御龙军虚拟 Agent 世界 · 演示模式</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+    /* ============================================================
+     * Demo Mode — Cinematic Overlay Styles
+     * ============================================================ */
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+      color: #edf2f7;
+    }
+
+    /* ---- Full-screen stage ---- */
+    #stage {
+      position: fixed; inset: 0;
+      background: radial-gradient(ellipse at 50% 40%, #0d0d1a 0%, #000 100%);
+      z-index: 1;
+    }
+
+    /* ---- Canvas for particles / agent dots ---- */
+    #particleCanvas {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      z-index: 2;
+    }
+
+    /* ---- Region overlay (semi-transparent colored blocks) ---- */
+    #regionOverlay {
+      position: absolute; inset: 0;
+      z-index: 3;
+      pointer-events: none;
+    }
+    .demo-region {
+      position: absolute;
+      border-radius: 12px;
+      opacity: 0;
+      transition: opacity 1.5s ease;
+    }
+    .demo-region .region-label {
+      position: absolute;
+      top: 8px; left: 10px;
+      font-size: .72em;
+      font-weight: 700;
+      color: rgba(255,255,255,.65);
+      text-shadow: 0 1px 4px rgba(0,0,0,.6);
+    }
+
+    /* ---- HUD layer ---- */
+    #hud {
+      position: fixed; inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+    }
+    #hud > * { pointer-events: auto; }
+
+    /* ---- Cinematic Title ---- */
+    #titleOverlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 1.5s ease;
+    }
+    #titleOverlay.visible { opacity: 1; }
+    #titleOverlay.hidden { opacity: 0; pointer-events: none; }
+
+    #titleOverlay h1 {
+      font-size: 3.5em;
+      font-weight: 900;
+      background: linear-gradient(135deg, #667eea, #764ba2, #e84393);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: none;
+      filter: drop-shadow(0 0 40px rgba(102,126,234,.5));
+      margin: 0;
+      letter-spacing: 4px;
+    }
+    #titleOverlay .subtitle {
+      font-size: 1.1em;
+      color: var(--muted, #718096);
+      margin-top: 12px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 1s ease .8s;
+    }
+    #titleOverlay.visible .subtitle {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ---- Agent Counter (Phase 1) ---- */
+    #agentCounter {
+      position: absolute;
+      bottom: 25%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 101;
+      text-align: center;
+      opacity: 0;
+      transition: opacity .8s ease;
+    }
+    #agentCounter.visible { opacity: 1; }
+    #agentCounter .count {
+      font-size: 5em;
+      font-weight: 900;
+      color: #667eea;
+      text-shadow: 0 0 60px rgba(102,126,234,.6);
+      font-variant-numeric: tabular-nums;
+    }
+    #agentCounter .label {
+      font-size: .9em;
+      color: var(--text2, #a0aec0);
+      margin-top: 4px;
+    }
+
+    /* ---- Narration text ---- */
+    #narration {
+      position: absolute;
+      bottom: 12%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 102;
+      font-size: 1.3em;
+      color: rgba(255,255,255,.85);
+      text-align: center;
+      max-width: 80%;
+      opacity: 0;
+      transition: opacity 1s ease;
+      text-shadow: 0 2px 20px rgba(0,0,0,.8);
+      letter-spacing: 2px;
+    }
+    #narration.visible { opacity: 1; }
+
+    /* ---- KPI Panel (left-bottom) ---- */
+    #kpiPanel {
+      position: absolute;
+      bottom: 260px;
+      left: 24px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      opacity: 0;
+      transform: translateX(-30px);
+      transition: all .8s ease;
+    }
+    #kpiPanel.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .demo-kpi {
+      background: rgba(22,33,62,.85);
+      border: 1px solid rgba(102,126,234,.25);
+      border-radius: 12px;
+      padding: 12px 18px;
+      min-width: 180px;
+      backdrop-filter: blur(12px);
+    }
+    .demo-kpi .kpi-label {
+      font-size: .72em;
+      color: var(--muted, #718096);
+      margin-bottom: 2px;
+    }
+    .demo-kpi .kpi-value {
+      font-size: 1.8em;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+    .demo-kpi .kpi-delta {
+      font-size: .7em;
+      margin-top: 2px;
+    }
+
+    /* ---- Event Stream (right-bottom) ---- */
+    #eventStream {
+      position: absolute;
+      bottom: 260px;
+      right: 24px;
+      width: 320px;
+      max-height: 300px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      opacity: 0;
+      transform: translateX(30px);
+      transition: all .8s ease;
+      overflow: hidden;
+    }
+    #eventStream.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    .demo-event {
+      background: rgba(22,33,62,.8);
+      border-left: 3px solid var(--purple, #667eea);
+      border-radius: 0 8px 8px 0;
+      padding: 8px 14px;
+      margin-bottom: 6px;
+      font-size: .82em;
+      color: var(--text2, #a0aec0);
+      backdrop-filter: blur(8px);
+      animation: eventSlideIn .5s ease-out;
+      opacity: 0;
+      animation-fill-mode: forwards;
+    }
+    @keyframes eventSlideIn {
+      from { opacity: 0; transform: translateX(40px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .demo-event .ev-main {
+      line-height: 1.4;
+    }
+    .demo-event .ev-time {
+      font-size: .75em;
+      color: var(--muted, #718096);
+      margin-top: 2px;
+    }
+
+    /* ---- ECharts container (bottom) ---- */
+    #chartContainer {
+      position: absolute;
+      bottom: 0;
+      left: 0; right: 0;
+      height: 240px;
+      z-index: 15;
+      background: linear-gradient(to top, rgba(0,0,0,.9) 0%, rgba(0,0,0,.4) 70%, transparent 100%);
+      opacity: 0;
+      transition: opacity .8s ease;
+    }
+    #chartContainer.visible { opacity: 1; }
+    #trendChart {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ---- Control bar ---- */
+    #controlBar {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      gap: 12px;
+      padding: 10px 24px;
+      background: rgba(22,33,62,.9);
+      border: 1px solid rgba(102,126,234,.3);
+      border-radius: 14px 14px 0 0;
+      backdrop-filter: blur(16px);
+    }
+    .ctrl-btn {
+      padding: 8px 20px;
+      border-radius: 8px;
+      border: 1px solid rgba(102,126,234,.3);
+      background: rgba(102,126,234,.12);
+      color: #fff;
+      font-size: .9em;
+      cursor: pointer;
+      transition: all .25s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ctrl-btn:hover {
+      background: rgba(102,126,234,.3);
+      border-color: rgba(102,126,234,.6);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(102,126,234,.25);
+    }
+    .ctrl-btn.exit-btn {
+      background: rgba(231,76,60,.12);
+      border-color: rgba(231,76,60,.3);
+    }
+    .ctrl-btn.exit-btn:hover {
+      background: rgba(231,76,60,.3);
+      border-color: rgba(231,76,60,.6);
+    }
+
+    /* ---- Phase 4: Timeline / Milestones ---- */
+    #milestoneOverlay {
+      position: absolute;
+      inset: 0;
+      z-index: 110;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,.85);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1s ease;
+    }
+    #milestoneOverlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .milestone-timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-width: 700px;
+      width: 90%;
+      max-height: 45vh;
+      overflow-y: auto;
+    }
+    .milestone-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      opacity: 0;
+      transform: translateY(15px);
+      transition: all .6s ease;
+    }
+    .milestone-item.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .ms-month {
+      font-size: .75em;
+      color: var(--purple, #667eea);
+      font-weight: 700;
+      min-width: 60px;
+      text-align: right;
+    }
+    .ms-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea, #e84393);
+      flex-shrink: 0;
+      box-shadow: 0 0 10px rgba(102,126,234,.5);
+    }
+    .ms-text {
+      font-size: .95em;
+      color: var(--text2, #a0aec0);
+    }
+
+    /* ---- Final KPI splash ---- */
+    #finalSplash {
+      text-align: center;
+      margin-top: 30px;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+    #finalSplash.visible { opacity: 1; }
+    .final-kpi-row {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .final-kpi {
+      text-align: center;
+    }
+    .final-kpi .fk-value {
+      font-size: 3em;
+      font-weight: 900;
+      background: linear-gradient(135deg, #667eea, #00cec9);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .final-kpi .fk-label {
+      font-size: .82em;
+      color: var(--muted, #718096);
+      margin-top: 4px;
+    }
+    .final-tagline {
+      font-size: 1.2em;
+      color: rgba(255,255,255,.7);
+      margin-top: 10px;
+      letter-spacing: 3px;
+    }
+
+    /* ---- Highlight flash for events ---- */
+    .event-highlight {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(253,203,110,.4) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 5;
+      animation: highlightPulse 2s ease-out forwards;
+    }
+    @keyframes highlightPulse {
+      0%   { transform: scale(0); opacity: 1; }
+      100% { transform: scale(3); opacity: 0; }
+    }
+
+    /* ---- Time indicator ---- */
+    #timeIndicator {
+      position: absolute;
+      top: 18px; right: 24px;
+      z-index: 50;
+      font-size: 1em;
+      color: rgba(255,255,255,.5);
+      font-variant-numeric: tabular-nums;
+      opacity: 0;
+      transition: opacity .6s;
+    }
+    #timeIndicator.visible { opacity: 1; }
+
+    /* ---- Phase label ---- */
+    #phaseLabel {
+      position: absolute;
+      top: 18px; left: 24px;
+      z-index: 50;
+      font-size: .78em;
+      color: var(--purple, #667eea);
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity .6s;
+    }
+    #phaseLabel.visible { opacity: 1; }
+    </style>
+</head>
+<body>
+
+<!-- Stage: background + particle canvas -->
+<div id="stage">
+  <canvas id="particleCanvas"></canvas>
+  <div id="regionOverlay"></div>
+</div>
+
+<!-- Demo Navigation Bar -->
+<div style="position:fixed;top:0;left:0;right:0;z-index:999;display:flex;align-items:center;justify-content:space-between;padding:10px 24px;background:rgba(22,33,62,0.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(102,126,234,0.2);">
+    <h1 style="font-size:1.2em;margin:0;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">🎬 演示模式</h1>
+    <nav style="display:flex;gap:8px;align-items:center">
+        <a href="/" class="nav-btn">🌍 世界地图</a>
+        <a href="/dashboard" class="nav-btn">📊 仪表盘</a>
+        <a href="/console" class="nav-btn">🎮 控制台</a>
+        <a href="/demo" class="nav-btn active">🎬 演示</a>
+        <a href="/reports" class="nav-btn">📊 报告</a>
+    </nav>
+</div>
+
+<!-- HUD overlays -->
+<div id="hud">
+  <!-- Phase label -->
+  <div id="phaseLabel"></div>
+  <!-- Time -->
+  <div id="timeIndicator"></div>
+  <!-- Title (Phase 1) -->
+  <div id="titleOverlay">
+    <h1>御龙军虚拟 Agent 世界</h1>
+    <div class="subtitle">1000 个独立的数字生命 · 26 个子系统 · 无限可能</div>
+  </div>
+  <!-- Agent counter (Phase 1) -->
+  <div id="agentCounter">
+    <div class="count" id="counterNum">0</div>
+    <div class="label">数字生命诞生中...</div>
+  </div>
+  <!-- Narration -->
+  <div id="narration"></div>
+  <!-- KPI Panel -->
+  <div id="kpiPanel">
+    <div class="demo-kpi">
+      <div class="kpi-label">👥 总人口</div>
+      <div class="kpi-value" id="dkPop" style="color:#667eea">--</div>
+    </div>
+    <div class="demo-kpi">
+      <div class="kpi-label">💼 就业率</div>
+      <div class="kpi-value" id="dkEmp" style="color:#00cec9">--%</div>
+    </div>
+    <div class="demo-kpi">
+      <div class="kpi-label">💰 平均月收入</div>
+      <div class="kpi-value" id="dkInc" style="color:#fdcb6e">$--</div>
+    </div>
+    <div class="demo-kpi">
+      <div class="kpi-label">😊 满意度</div>
+      <div class="kpi-value" id="dkSat" style="color:#e84393">--</div>
+    </div>
+  </div>
+  <!-- Event stream -->
+  <div id="eventStream"></div>
+  <!-- Milestone overlay (Phase 4) -->
+  <div id="milestoneOverlay">
+    <div class="milestone-timeline" id="milestoneTimeline"></div>
+    <div id="finalSplash">
+      <div class="final-kpi-row" id="finalKpiRow"></div>
+      <div class="final-tagline">26 个子系统在幕后协同运转 🐉</div>
+    </div>
+  </div>
+</div>
+
+<!-- ECharts trend chart -->
+<div id="chartContainer">
+  <div id="trendChart"></div>
+</div>
+
+<!-- Control bar -->
+<div id="controlBar">
+  <button class="ctrl-btn" id="btnPause" onclick="togglePause()">⏸ 暂停</button>
+  <button class="ctrl-btn" onclick="restartDemo()">🔄 重新开始</button>
+  <button class="ctrl-btn exit-btn" onclick="exitDemo()">✕ 退出</button>
+</div>
+
+<script>
+// ============================================================
+// Demo Mode Controller
+// ============================================================
+
+const TOTAL_DURATION = 90000; // 90 seconds
+const PHASE_TIMES = [
+  { name: '创世',       start: 0,     end: 10000 },
+  { name: '社会形成',   start: 10000, end: 30000 },
+  { name: '繁荣与危机', start: 30000, end: 60000 },
+  { name: '回顾',       start: 60000, end: 90000 },
+];
+
+// ---- State ----
+let paused = false;
+let startTime = 0;
+let pauseOffset = 0;
+let pauseStart = 0;
+let rafId = null;
+let demoData = null; // 12-month snapshot from API (or mock)
+let trendChart = null;
+let agents = [];  // { x, y, vx, vy, color, region, alive }
+let regionRects = [];
+
+// ---- Region definitions ----
+const REGIONS = [
+  { name: '住宅区',   color: 'rgba(102,126,234,.18)', x: .02, y: .05, w: .28, h: .35 },
+  { name: '商业区',   color: 'rgba(0,206,201,.18)',   x: .35, y: .05, w: .30, h: .30 },
+  { name: '工业区',   color: 'rgba(253,203,110,.18)', x: .70, y: .05, w: .28, h: .30 },
+  { name: '教育区',   color: 'rgba(232,67,147,.18)',  x: .02, y: .45, w: .30, h: .25 },
+  { name: '医疗区',   color: 'rgba(0,184,148,.18)',   x: .35, y: .40, w: .28, h: .28 },
+  { name: '公园区',   color: 'rgba(162,155,254,.18)', x: .68, y: .40, w: .30, h: .28 },
+];
+
+const REGION_COLORS_BRIGHT = [
+  '#667eea', '#00cec9', '#fdcb6e', '#e84393', '#00b894', '#a29bfe'
+];
+
+// ---- Chinese names pool ----
+const SURNAMES = ['张','李','王','赵','刘','陈','杨','黄','周','吴','徐','孙','马','朱','胡','郭','何','高','林','罗','郑','梁'];
+const GIVEN = ['伟','芳','娜','秀英','敏','静','丽','强','磊','军','洋','勇','艳','杰','涛','明','超','秀兰','霞','平','刚','桂英'];
+
+function randName() {
+  return SURNAMES[Math.floor(Math.random()*SURNAMES.length)] + GIVEN[Math.floor(Math.random()*GIVEN.length)];
+}
+
+// ---- Demo events pool ----
+const EVENT_TEMPLATES = [
+  { icon: '💼', tpl: (n) => `${n}找到了第一份工作` },
+  { icon: '❤️', tpl: (n,n2) => `${n}和${n2}相恋了` },
+  { icon: '👶', tpl: (n) => `${n}的宝宝出生了` },
+  { icon: '🎓', tpl: (n) => `${n}获得了大学学位` },
+  { icon: '🏠', tpl: (n) => `${n}购买了第一套住房` },
+  { icon: '💰', tpl: (n) => `${n}升职加薪了` },
+  { icon: '🏥', tpl: (n) => `${n}完成了年度体检` },
+  { icon: '🎉', tpl: (n,n2) => `${n}和${n2}结婚了` },
+  { icon: '📈', tpl: (n) => `${n}创业成功，公司上市` },
+  { icon: '🦠', tpl: () => `流感疫情爆发，医疗系统启动应急` },
+  { icon: '📉', tpl: () => `经济下行，失业率短暂上升` },
+  { icon: '🏗️', tpl: () => `新工业园区建成，创造 500 个岗位` },
+  { icon: '🎭', tpl: (n) => `${n}成为社区志愿者` },
+  { icon: '🏆', tpl: (n) => `${n}获得年度最佳员工` },
+  { icon: '💔', tpl: (n,n2) => `${n}和${n2}分手了` },
+];
+
+const HIGHLIGHT_EVENTS = [
+  { month: 3, icon: '🦠', text: '突发流感疫情！医疗区全力运转' },
+  { month: 5, icon: '📈', text: '经济指数突破历史新高' },
+  { month: 7, icon: '🏗️', text: '大型科技园区建成开放' },
+  { month: 9, icon: '🎉', text: '第 100 对新人完成婚礼' },
+  { month: 11, icon: '💰', text: '人均收入翻倍，满意度飙升' },
+];
+
+const MILESTONES = [
+  { month: '第1月', text: '🌍 1000 个 Agent 诞生，社会初始化完成' },
+  { month: '第2月', text: '💼 就业市场开放，800+ Agent 找到工作' },
+  { month: '第3月', text: '🦠 流感疫情爆发，医疗系统首次考验' },
+  { month: '第4月', text: '❤️ 第一批恋人出现，社交网络形成' },
+  { month: '第5月', text: '📈 经济指数突破历史新高' },
+  { month: '第6月', text: '🎓 首批 Agent 完成教育培训' },
+  { month: '第7月', text: '🏗️ 科技园区建成，产业升级' },
+  { month: '第8月', text: '👶 迎来婴儿潮，人口增长加速' },
+  { month: '第9月', text: '🎉 第 100 对新人结婚' },
+  { month: '第10月', text: '📉 经济短暂调整，系统自动干预' },
+  { month: '第11月', text: '💰 人均收入翻倍' },
+  { month: '第12月', text: '🐉 御龙军虚拟世界运转一周年' },
+];
+
+// ---- Mock data generator (fallback if API fails) ----
+function generateMockData() {
+  const months = [];
+  let pop = 1000, emp = 0.45, inc = 2800, sat = 55, health = 72, happiness = 50, crime = 0.08;
+  for (let m = 1; m <= 12; m++) {
+    pop += Math.floor(Math.random() * 60 + 20);
+    emp = Math.min(.98, emp + (Math.random() * .06 - .01));
+    inc += Math.floor(Math.random() * 400 + 100);
+    sat = Math.min(95, sat + (Math.random() * 4 - .5));
+    health = Math.min(96, health + (Math.random() * 2 - .3));
+    happiness = Math.min(92, happiness + (Math.random() * 3.5 - .5));
+    crime = Math.max(.01, crime + (Math.random() * .01 - .008));
+    // epidemic dip at month 3
+    if (m === 3) { emp -= .04; sat -= 3; health -= 5; }
+    // recovery
+    if (m === 4) { health += 4; }
+    // economic dip month 10
+    if (m === 10) { emp -= .02; inc -= 200; }
+    months.push({
+      month: m,
+      population: pop,
+      employment_rate: +emp.toFixed(3),
+      avg_income: inc,
+      satisfaction: +sat.toFixed(1),
+      health: +health.toFixed(1),
+      happiness: +happiness.toFixed(1),
+      crime_rate: +crime.toFixed(4),
+    });
+  }
+  return { months, events: [] };
+}
+
+// ---- Fetch demo data ----
+async function fetchDemoData() {
+  try {
+    const resp = await fetch('/api/demo/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (resp.ok) {
+      const raw = await resp.json();
+      // Normalize: API may return {success, data: {months: [...]}} or {months: [...]}
+      demoData = raw.data || raw;
+      if (!demoData.months || !demoData.months.length) {
+        console.warn('Demo API returned no months data, using mock');
+        demoData = generateMockData();
+      }
+    } else {
+      console.warn('Demo API returned ' + resp.status + ', using mock data');
+      demoData = generateMockData();
+    }
+  } catch (e) {
+    console.warn('Demo API fetch failed:', e, '— using mock data');
+    demoData = generateMockData();
+  }
+}
+
+// ============================================================
+// Canvas: Particles & Agent dots
+// ============================================================
+const canvas = document.getElementById('particleCanvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resizeCanvas() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  if (trendChart) trendChart.resize();
+});
+resizeCanvas();
+
+// Spawn agent dots progressively
+function spawnAgents(count) {
+  for (let i = agents.length; i < count; i++) {
+    const regionIdx = Math.floor(Math.random() * REGIONS.length);
+    const r = REGIONS[regionIdx];
+    agents.push({
+      x: (r.x + Math.random() * r.w) * W,
+      y: (r.y + Math.random() * r.h) * H,
+      vx: (Math.random() - .5) * .3,
+      vy: (Math.random() - .5) * .3,
+      color: REGION_COLORS_BRIGHT[regionIdx],
+      region: regionIdx,
+      radius: 2 + Math.random() * 2,
+      alpha: 0,     // fade-in
+      alive: true,
+      birthTime: performance.now(),
+    });
+  }
+}
+
+function drawAgents(elapsed) {
+  ctx.clearRect(0, 0, W, H);
+  const now = performance.now();
+  for (const a of agents) {
+    if (!a.alive) continue;
+    // fade in
+    const age = now - a.birthTime;
+    a.alpha = Math.min(1, age / 600);
+    // drift
+    a.x += a.vx;
+    a.y += a.vy;
+    // soft boundary within region
+    const r = REGIONS[a.region];
+    const rx = r.x * W, ry = r.y * H, rw = r.w * W, rh = r.h * H;
+    if (a.x < rx || a.x > rx + rw) a.vx *= -1;
+    if (a.y < ry || a.y > ry + rh) a.vy *= -1;
+    // draw
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, a.radius, 0, Math.PI * 2);
+    ctx.fillStyle = a.color;
+    ctx.globalAlpha = a.alpha * .8;
+    ctx.fill();
+    // glow
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, a.radius + 3, 0, Math.PI * 2);
+    ctx.fillStyle = a.color;
+    ctx.globalAlpha = a.alpha * .15;
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ============================================================
+// Regions overlay
+// ============================================================
+function initRegions() {
+  const overlay = document.getElementById('regionOverlay');
+  overlay.innerHTML = '';
+  REGIONS.forEach((r, i) => {
+    const div = document.createElement('div');
+    div.className = 'demo-region';
+    div.id = 'demoReg' + i;
+    div.style.left = (r.x * 100) + '%';
+    div.style.top = (r.y * 100) + '%';
+    div.style.width = (r.w * 100) + '%';
+    div.style.height = (r.h * 100) + '%';
+    div.style.background = r.color;
+    div.innerHTML = `<span class="region-label">${r.name}</span>`;
+    overlay.appendChild(div);
+  });
+}
+
+function showRegions() {
+  REGIONS.forEach((_, i) => {
+    setTimeout(() => {
+      const el = document.getElementById('demoReg' + i);
+      if (el) el.style.opacity = '1';
+    }, i * 300);
+  });
+}
+
+// ============================================================
+// ECharts trend chart
+// ============================================================
+function initChart() {
+  const el = document.getElementById('trendChart');
+  trendChart = echarts.init(el, 'dark');
+  trendChart.setOption({
+    backgroundColor: 'transparent',
+    grid: { top: 30, bottom: 30, left: 60, right: 30 },
+    tooltip: { trigger: 'axis' },
+    legend: {
+      top: 4,
+      textStyle: { color: '#a0aec0', fontSize: 11 },
+      data: ['人口', '收入', '就业率', '满意度']
+    },
+    xAxis: {
+      type: 'category',
+      data: [],
+      axisLine: { lineStyle: { color: 'rgba(102,126,234,.3)' } },
+      axisLabel: { color: '#718096', fontSize: 11 },
+    },
+    yAxis: [
+      { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,.05)' } }, axisLabel: { color: '#718096', fontSize: 10 } },
+      { type: 'value', max: 100, splitLine: { show: false }, axisLabel: { color: '#718096', fontSize: 10, formatter: '{value}%' } },
+    ],
+    series: [
+      { name: '人口',   type: 'line', smooth: true, symbol: 'none', lineStyle: { width: 2, color: '#667eea' }, areaStyle: { color: { type:'linear', x:0,y:0,x2:0,y2:1, colorStops:[{offset:0,color:'rgba(102,126,234,.25)'},{offset:1,color:'rgba(102,126,234,0)'}] } }, data: [] },
+      { name: '收入',   type: 'line', smooth: true, symbol: 'none', lineStyle: { width: 2, color: '#fdcb6e' }, data: [] },
+      { name: '就业率', type: 'line', smooth: true, symbol: 'none', lineStyle: { width: 2, color: '#00cec9' }, yAxisIndex: 1, data: [] },
+      { name: '满意度', type: 'line', smooth: true, symbol: 'none', lineStyle: { width: 2, color: '#e84393' }, yAxisIndex: 1, data: [] },
+    ],
+    animationDuration: 800,
+    animationEasing: 'cubicOut',
+  });
+}
+
+function updateChart(upToMonth) {
+  if (!demoData || !trendChart) return;
+  const months = demoData.months.slice(0, upToMonth);
+  const xData = months.map(m => `第${m.month}月`);
+  trendChart.setOption({
+    xAxis: { data: xData },
+    series: [
+      { name: '人口',   data: months.map(m => m.population) },
+      { name: '收入',   data: months.map(m => m.avg_income) },
+      { name: '就业率', data: months.map(m => +(m.employment_rate * 100).toFixed(1)) },
+      { name: '满意度', data: months.map(m => m.satisfaction) },
+    ],
+  });
+}
+
+// ============================================================
+// KPI Animated Counter
+// ============================================================
+function animateValue(el, target, prefix, suffix, duration) {
+  const start = parseFloat(el.dataset.current || '0');
+  el.dataset.current = target;
+  const startTime = performance.now();
+  function step(now) {
+    const progress = Math.min((now - startTime) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+    const val = start + (target - start) * eased;
+    el.textContent = prefix + (Number.isInteger(target) ? Math.round(val).toLocaleString() : val.toFixed(1)) + suffix;
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function updateKPIs(monthData) {
+  if (!monthData) return;
+  animateValue(document.getElementById('dkPop'), monthData.population, '', '', 600);
+  animateValue(document.getElementById('dkEmp'), +(monthData.employment_rate * 100).toFixed(1), '', '%', 600);
+  animateValue(document.getElementById('dkInc'), monthData.avg_income, '$', '', 600);
+  animateValue(document.getElementById('dkSat'), monthData.satisfaction, '', '', 600);
+}
+
+// ============================================================
+// Event stream
+// ============================================================
+let eventCount = 0;
+function pushEvent(icon, text, time) {
+  const stream = document.getElementById('eventStream');
+  const div = document.createElement('div');
+  div.className = 'demo-event';
+  div.style.animationDelay = '0s';
+  div.innerHTML = `<div class="ev-main">${icon} ${text}</div><div class="ev-time">${time}</div>`;
+  stream.insertBefore(div, stream.firstChild);
+  eventCount++;
+  // keep max 8
+  while (stream.children.length > 8) {
+    stream.removeChild(stream.lastChild);
+  }
+}
+
+function pushRandomEvent(month) {
+  const tpl = EVENT_TEMPLATES[Math.floor(Math.random() * EVENT_TEMPLATES.length)];
+  const n1 = randName(), n2 = randName();
+  const text = tpl.tpl(n1, n2);
+  pushEvent(tpl.icon, text, `第${month}月`);
+}
+
+// ============================================================
+// Highlight flash on canvas
+// ============================================================
+function flashHighlight() {
+  const el = document.createElement('div');
+  el.className = 'event-highlight';
+  const size = 80 + Math.random() * 60;
+  el.style.width = el.style.height = size + 'px';
+  el.style.left = (Math.random() * 70 + 15) + '%';
+  el.style.top = (Math.random() * 50 + 10) + '%';
+  document.getElementById('regionOverlay').appendChild(el);
+  setTimeout(() => el.remove(), 2200);
+}
+
+// ============================================================
+// Demo Main Loop
+// ============================================================
+let lastPhase = -1;
+let lastMonth = 0;
+let phase1AgentTarget = 0;
+let eventIntervalPhase2 = null;
+let eventIntervalPhase3 = null;
+
+function getElapsed() {
+  if (paused) return pauseOffset;
+  return (performance.now() - startTime) + pauseOffset;
+}
+
+function getCurrentPhase(elapsed) {
+  for (let i = PHASE_TIMES.length - 1; i >= 0; i--) {
+    if (elapsed >= PHASE_TIMES[i].start) return i;
+  }
+  return 0;
+}
+
+function setNarration(text) {
+  const el = document.getElementById('narration');
+  el.classList.remove('visible');
+  setTimeout(() => {
+    el.textContent = text;
+    el.classList.add('visible');
+  }, 200);
+}
+
+function clearNarration() {
+  document.getElementById('narration').classList.remove('visible');
+}
+
+function show(id)  { document.getElementById(id).classList.add('visible'); }
+function hide(id)  { document.getElementById(id).classList.remove('visible'); }
+function setPhaseLabel(text) {
+  const el = document.getElementById('phaseLabel');
+  el.textContent = text;
+  el.classList.add('visible');
+}
+
+function enterPhase(phaseIdx) {
+  if (phaseIdx === lastPhase) return;
+  lastPhase = phaseIdx;
+  const phase = PHASE_TIMES[phaseIdx];
+  setPhaseLabel(`PHASE ${phaseIdx + 1}: ${phase.name}`);
+
+  switch (phaseIdx) {
+    case 0: // 创世
+      show('titleOverlay');
+      show('agentCounter');
+      break;
+    case 1: // 社会形成
+      hide('titleOverlay');
+      hide('agentCounter');
+      clearNarration();
+      show('kpiPanel');
+      show('eventStream');
+      show('chartContainer');
+      show('timeIndicator');
+      showRegions();
+      // start event generation
+      if (eventIntervalPhase2) clearInterval(eventIntervalPhase2);
+      eventIntervalPhase2 = setInterval(() => {
+        if (paused) return;
+        const elapsed = getElapsed();
+        const monthProgress = ((elapsed - 10000) / 20000); // 0..1 over 20s
+        const month = Math.max(1, Math.min(4, Math.ceil(monthProgress * 4)));
+        pushRandomEvent(month);
+      }, 2000);
+      break;
+    case 2: // 繁荣与危机
+      if (eventIntervalPhase2) { clearInterval(eventIntervalPhase2); eventIntervalPhase2 = null; }
+      // faster events
+      if (eventIntervalPhase3) clearInterval(eventIntervalPhase3);
+      eventIntervalPhase3 = setInterval(() => {
+        if (paused) return;
+        const elapsed = getElapsed();
+        const monthProgress = ((elapsed - 30000) / 30000); // 0..1 over 30s
+        const month = Math.max(5, Math.min(12, Math.ceil(monthProgress * 8) + 4));
+        pushRandomEvent(month);
+        if (Math.random() < .3) flashHighlight();
+      }, 1200);
+      break;
+    case 3: // 回顾
+      if (eventIntervalPhase3) { clearInterval(eventIntervalPhase3); eventIntervalPhase3 = null; }
+      hide('kpiPanel');
+      hide('eventStream');
+      show('milestoneOverlay');
+      // animate milestones one by one
+      const items = document.querySelectorAll('.milestone-item');
+      items.forEach((item, i) => {
+        setTimeout(() => item.classList.add('visible'), i * 1500);
+      });
+      // show final splash after milestones
+      setTimeout(() => {
+        show('finalSplash');
+      }, items.length * 1500 + 500);
+      break;
+  }
+}
+
+function tick() {
+  if (paused) { rafId = requestAnimationFrame(tick); return; }
+  const elapsed = getElapsed();
+  const phase = getCurrentPhase(elapsed);
+  enterPhase(phase);
+
+  // ---- Phase 0: Creation (0-10s) ----
+  if (phase === 0) {
+    const progress = elapsed / 10000; // 0..1
+    const targetCount = Math.min(1000, Math.floor(progress * 1000));
+    spawnAgents(targetCount);
+    document.getElementById('counterNum').textContent = targetCount.toLocaleString();
+    if (progress > .85) {
+      setNarration('1000 个独立的数字生命诞生了');
+    }
+  }
+
+  // ---- Phase 1: Society (10-30s) ----
+  if (phase === 1) {
+    const progress = (elapsed - 10000) / 20000; // 0..1
+    const month = Math.max(1, Math.min(4, Math.ceil(progress * 4)));
+    if (month !== lastMonth && demoData) {
+      lastMonth = month;
+      updateKPIs(demoData.months[month - 1]);
+      updateChart(month);
+    }
+    document.getElementById('timeIndicator').textContent = `📅 第 ${month} 月`;
+    // keep spawning a few more agents
+    spawnAgents(Math.min(1000 + Math.floor(progress * 80), agents.length + 1));
+  }
+
+  // ---- Phase 2: Prosperity (30-60s) ----
+  if (phase === 2) {
+    const progress = (elapsed - 30000) / 30000;
+    const month = Math.max(5, Math.min(12, Math.ceil(progress * 8) + 4));
+    if (month !== lastMonth && demoData) {
+      lastMonth = month;
+      updateKPIs(demoData.months[month - 1]);
+      updateChart(month);
+      // check highlight events
+      const highlight = HIGHLIGHT_EVENTS.find(e => e.month === month);
+      if (highlight) {
+        pushEvent(highlight.icon, highlight.text, `第${month}月`);
+        flashHighlight();
+        setNarration(highlight.text);
+        setTimeout(clearNarration, 3000);
+      }
+    }
+    document.getElementById('timeIndicator').textContent = `📅 第 ${month} 月  ⏩ 加速中`;
+    spawnAgents(Math.min(1000 + Math.floor(progress * 200), agents.length + 1));
+  }
+
+  // ---- Phase 3: Review (60-90s) ----
+  if (phase === 3) {
+    document.getElementById('timeIndicator').textContent = `📅 回顾 · 12 个月旅程`;
+  }
+
+  // Draw agents
+  drawAgents(elapsed);
+
+  // Loop or stop
+  if (elapsed < TOTAL_DURATION) {
+    rafId = requestAnimationFrame(tick);
+  } else {
+    // Done
+    setPhaseLabel('✅ 演示完成');
+  }
+}
+
+// ============================================================
+// Build Phase 4 milestones DOM
+// ============================================================
+function buildMilestones() {
+  const container = document.getElementById('milestoneTimeline');
+  container.innerHTML = '';
+  MILESTONES.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'milestone-item';
+    div.innerHTML = `<span class="ms-month">${m.month}</span><span class="ms-dot"></span><span class="ms-text">${m.text}</span>`;
+    container.appendChild(div);
+  });
+
+  // Build final KPI row
+  const finalRow = document.getElementById('finalKpiRow');
+  if (demoData && demoData.months.length > 0) {
+    const last = demoData.months[demoData.months.length - 1];
+    const kpis = [
+      { label: '总人口', value: last.population.toLocaleString() },
+      { label: '就业率', value: (last.employment_rate * 100).toFixed(1) + '%' },
+      { label: '平均月收入', value: '$' + last.avg_income.toLocaleString() },
+      { label: '满意度', value: last.satisfaction.toFixed(1) },
+    ];
+    finalRow.innerHTML = kpis.map(k => `
+      <div class="final-kpi">
+        <div class="fk-value">${k.value}</div>
+        <div class="fk-label">${k.label}</div>
+      </div>
+    `).join('');
+  }
+}
+
+// ============================================================
+// Controls
+// ============================================================
+function togglePause() {
+  const btn = document.getElementById('btnPause');
+  if (paused) {
+    // Resume
+    paused = false;
+    startTime = performance.now();
+    btn.textContent = '⏸ 暂停';
+  } else {
+    // Pause
+    pauseOffset = getElapsed();
+    pauseStart = performance.now();
+    paused = true;
+    btn.textContent = '▶️ 继续';
+  }
+}
+
+function restartDemo() {
+  // cleanup
+  if (rafId) cancelAnimationFrame(rafId);
+  if (eventIntervalPhase2) clearInterval(eventIntervalPhase2);
+  if (eventIntervalPhase3) clearInterval(eventIntervalPhase3);
+  eventIntervalPhase2 = null;
+  eventIntervalPhase3 = null;
+  agents = [];
+  lastPhase = -1;
+  lastMonth = 0;
+  eventCount = 0;
+  paused = false;
+  pauseOffset = 0;
+  document.getElementById('btnPause').textContent = '⏸ 暂停';
+
+  // Reset UI
+  ['titleOverlay','agentCounter','kpiPanel','eventStream','chartContainer','timeIndicator','milestoneOverlay','finalSplash','phaseLabel','narration'].forEach(id => hide(id));
+  document.getElementById('eventStream').innerHTML = '';
+  document.getElementById('counterNum').textContent = '0';
+  document.getElementById('narration').textContent = '';
+  // Reset regions
+  REGIONS.forEach((_, i) => {
+    const el = document.getElementById('demoReg' + i);
+    if (el) el.style.opacity = '0';
+  });
+  // Reset chart
+  if (trendChart) {
+    trendChart.setOption({ xAxis: { data: [] }, series: [{ data: [] },{ data: [] },{ data: [] },{ data: [] }] });
+  }
+  // Reset KPIs
+  ['dkPop','dkEmp','dkInc','dkSat'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = '--';
+    el.dataset.current = '0';
+  });
+
+  buildMilestones();
+  startTime = performance.now();
+  rafId = requestAnimationFrame(tick);
+}
+
+function exitDemo() {
+  window.location.href = '/';
+}
+
+// ============================================================
+// Init
+// ============================================================
+async function init() {
+  await fetchDemoData();
+  initRegions();
+  initChart();
+  buildMilestones();
+  startTime = performance.now();
+  rafId = requestAnimationFrame(tick);
+}
+
+init();
+</script>
+</body>
+</html>

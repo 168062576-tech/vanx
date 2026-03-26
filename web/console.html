@@ -1,0 +1,1098 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>御龙军虚拟世界 - 实验控制台 v5.0</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+    /* ============================================================
+     * 控制台页面专用样式 — 基于 main.css CSS 变量
+     * ============================================================ */
+
+    /* --- 覆盖 header 使其适配控制台 --- */
+    .console-header {
+        background: linear-gradient(135deg, var(--purple), var(--violet));
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+    }
+    .console-header h1 { font-size: 1.3em; color: #fff; white-space: nowrap; }
+    .console-header .nav-links { display: flex; gap: 8px; align-items: center; }
+    .console-header .nav-links a {
+        color: #fff; text-decoration: none; font-size: .85em;
+        padding: 5px 12px; border-radius: 6px;
+        background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+        transition: all .2s;
+    }
+    .console-header .nav-links a:hover { background: rgba(255,255,255,.3); }
+
+    /* --- 主容器 --- */
+    .console-container {
+        max-width: 1300px; margin: 0 auto; padding: 24px;
+    }
+
+    /* --- Dashboard: 服务状态行 --- */
+    .status-row {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;
+    }
+    .status-card {
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 20px; text-align: center;
+        transition: all .3s;
+    }
+    .status-card:hover { border-color: var(--purple); transform: translateY(-3px); }
+    .status-card .icon { font-size: 2.2em; margin-bottom: 10px; }
+    .status-card .name { font-size: 1.05em; font-weight: bold; margin-bottom: 4px; color: var(--text); }
+    .status-card .port { font-size: .82em; color: var(--muted); margin-bottom: 10px; }
+    .status-dot {
+        display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+        margin-right: 6px; background: #6c757d; vertical-align: middle;
+    }
+    .status-dot.online { background: var(--green); box-shadow: 0 0 8px rgba(0,184,148,.6); }
+    .status-dot.offline { background: #dc3545; }
+    .status-text { font-size: .88em; color: var(--text2); }
+
+    /* --- Dashboard: 功能入口网格 --- */
+    .nav-grid {
+        display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;
+    }
+    .nav-card {
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 24px; cursor: pointer;
+        transition: all .3s; text-decoration: none; color: inherit; display: block;
+    }
+    .nav-card:hover {
+        border-color: var(--purple); transform: translateY(-4px);
+        box-shadow: 0 10px 30px rgba(102,126,234,.25);
+    }
+    .nav-card.primary {
+        background: linear-gradient(135deg, rgba(102,126,234,0.2) 0%, rgba(118,75,162,0.2) 100%);
+        border-color: rgba(102,126,234,.4);
+    }
+    .nav-card .card-icon { font-size: 2.2em; margin-bottom: 10px; }
+    .nav-card .card-title { font-size: 1.2em; font-weight: bold; margin-bottom: 6px; color: var(--text); }
+    .nav-card .card-desc { font-size: .9em; color: var(--muted); line-height: 1.5; }
+
+    /* --- Dashboard: 最近实验 --- */
+    .section-title { font-size: 1.2em; font-weight: bold; margin-bottom: 12px; color: var(--purple); }
+    .dash-panel {
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 20px;
+    }
+    .recent-item {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .recent-item:last-child { border-bottom: none; }
+    .recent-name { font-weight: bold; color: var(--text); }
+    .recent-meta { font-size: .82em; color: var(--muted); margin-top: 2px; }
+    .badge {
+        padding: 4px 12px; border-radius: 12px; font-size: .8em; font-weight: bold;
+    }
+    .badge-ok { background: var(--green); color: white; }
+    .badge-run { background: var(--yellow); color: #333; }
+    .badge-fail { background: #dc3545; color: white; }
+    .empty-text { text-align: center; color: var(--muted); padding: 20px; }
+
+    /* --- 步骤条 --- */
+    .steps {
+        display: flex; justify-content: center; gap: 12px; margin-bottom: 28px; align-items: flex-start;
+    }
+    .step-item { text-align: center; }
+    .step-dot {
+        width: 40px; height: 40px; border-radius: 50%;
+        background: rgba(255,255,255,0.08); color: var(--muted);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: bold; font-size: 1.1em; transition: all .3s;
+        margin: 0 auto 4px;
+    }
+    .step-dot.active { background: var(--purple); color: white; box-shadow: 0 0 20px rgba(102,126,234,.5); }
+    .step-dot.done { background: var(--green); color: white; }
+    .step-label { font-size: .78em; color: var(--muted); }
+    .step-connector {
+        width: 40px; height: 2px; background: var(--border); margin-top: 19px;
+    }
+
+    /* --- 通用面板 --- */
+    .c-panel {
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 28px; margin-bottom: 20px;
+    }
+    .c-panel h2 { color: var(--purple); margin-bottom: 18px; font-size: 1.3em; }
+
+    /* --- 分类筛选按钮 --- */
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+    .filter-btn {
+        padding: 7px 16px; border-radius: 20px; border: 1px solid var(--border);
+        background: transparent; color: var(--text2); cursor: pointer;
+        font-size: .9em; transition: all .2s;
+    }
+    .filter-btn:hover, .filter-btn.active {
+        background: var(--purple); color: white; border-color: var(--purple);
+    }
+
+    /* --- 模板网格 --- */
+    .template-grid {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 14px; margin-bottom: 18px;
+    }
+    .tpl-card {
+        background: rgba(255,255,255,0.03); border: 2px solid var(--border);
+        border-radius: var(--radius); padding: 16px; cursor: pointer; transition: all .3s;
+    }
+    .tpl-card:hover { border-color: var(--purple); transform: translateY(-3px); box-shadow: 0 8px 25px rgba(102,126,234,.2); }
+    .tpl-card.selected { border-color: var(--purple); background: rgba(102,126,234,0.15); }
+    .tpl-card .cat-badge {
+        display: inline-block; font-size: .78em; padding: 2px 10px;
+        border-radius: 10px; background: rgba(102,126,234,.25); margin-bottom: 6px; color: var(--text2);
+    }
+    .tpl-card .tpl-name { font-size: 1.1em; font-weight: bold; margin-bottom: 5px; color: var(--text); }
+    .tpl-card .tpl-desc { font-size: .85em; color: var(--muted); margin-bottom: 6px; line-height: 1.4; }
+    .tpl-card .tpl-meta { font-size: .8em; color: var(--muted); }
+    .tpl-card .tpl-metrics { font-size: .78em; color: var(--muted); margin-top: 5px; }
+
+    /* --- 配置表单 --- */
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .config-group label { display: block; font-weight: bold; margin-bottom: 6px; color: var(--text2); font-size: .92em; }
+    .config-group select,
+    .config-group input,
+    .config-group textarea {
+        width: 100%; padding: 10px; border: 1px solid var(--border);
+        border-radius: 8px; background: rgba(255,255,255,0.05); color: var(--text);
+        font-size: .95em; font-family: inherit;
+    }
+    .config-group select option { background: var(--bg2); color: var(--text); }
+    .config-group textarea { resize: vertical; }
+    .config-summary {
+        background: rgba(102,126,234,0.1); border: 1px solid rgba(102,126,234,.25);
+        border-radius: 10px; padding: 18px; margin-top: 18px;
+    }
+    .config-summary h3 { margin-bottom: 10px; color: var(--purple); font-size: 1.05em; }
+    .config-summary .row {
+        display: flex; justify-content: space-between; padding: 5px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.04); font-size: .92em;
+    }
+    .config-summary .row:last-child { border-bottom: none; }
+
+    /* --- 用户自定义区（紫色渐变边框卡片） --- */
+    .user-context-box {
+        background: linear-gradient(var(--card), var(--card)) padding-box,
+                    linear-gradient(135deg, #667eea, #764ba2, #667eea) border-box;
+        border: 2px solid transparent;
+        border-radius: var(--radius); padding: 24px; margin-bottom: 24px;
+        position: relative;
+        box-shadow: 0 4px 20px rgba(102,126,234,0.15);
+    }
+    .user-context-box:hover {
+        box-shadow: 0 6px 30px rgba(102,126,234,0.25);
+    }
+    .user-context-box h3 { color: var(--purple); margin-bottom: 16px; font-size: 1.1em; }
+    .smart-btn {
+        margin-top: 10px; padding: 9px 22px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        color: white; border: none; border-radius: 6px; cursor: pointer; font-size: .9em;
+        transition: all .3s; font-weight: bold;
+    }
+    .smart-btn:hover {
+        opacity: .9; transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(102,126,234,.4);
+    }
+    .smart-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+    .analyze-status { margin-left: 10px; font-size: .82em; color: var(--muted); }
+
+    /* --- 操作按钮 --- */
+    .actions { display: flex; gap: 14px; justify-content: center; margin-top: 22px; }
+    .btn {
+        padding: 12px 30px; border: none; border-radius: 8px; font-size: 1em;
+        font-weight: bold; cursor: pointer; transition: all .3s;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, var(--purple) 0%, var(--violet) 100%); color: white;
+    }
+    .btn-primary:hover { opacity: .9; transform: translateY(-2px); box-shadow: 0 5px 20px rgba(102,126,234,.35); }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-secondary { background: rgba(255,255,255,0.08); color: var(--text2); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.15); }
+    .btn-danger { background: #dc3545; color: white; }
+
+    /* --- 进度显示 --- */
+    .progress-container { text-align: center; padding: 40px 20px; }
+    .progress-bar-wrap {
+        width: 100%; height: 24px; background: rgba(255,255,255,0.06);
+        border-radius: 12px; overflow: hidden; margin: 18px 0;
+    }
+    .progress-fill {
+        height: 100%; background: linear-gradient(90deg, var(--purple), var(--violet), var(--green));
+        width: 0%; transition: width .5s; border-radius: 12px;
+    }
+    .progress-pct { font-size: 2.2em; font-weight: bold; color: var(--purple); }
+    .progress-stage { font-size: 1.05em; margin-top: 10px; color: var(--text2); }
+
+    /* --- 报告区 --- */
+    .report-box {
+        background: rgba(0,0,0,0.25); border: 1px solid var(--border);
+        border-radius: 10px; padding: 22px;
+        white-space: pre-wrap; font-family: 'Consolas', 'Courier New', monospace;
+        font-size: .88em; max-height: 600px; overflow-y: auto;
+        line-height: 1.6; color: var(--text2);
+    }
+    .report-actions { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+
+    /* --- 实验历史列表 --- */
+    .exp-list { margin-top: 12px; }
+    .exp-item {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 12px 14px; background: rgba(255,255,255,0.03); border-radius: 8px;
+        margin-bottom: 8px; border: 1px solid var(--border);
+    }
+    .status-badge {
+        padding: 4px 12px; border-radius: 12px; font-size: .82em; font-weight: bold;
+    }
+    .status-completed { background: var(--green); color: white; }
+    .status-running { background: var(--yellow); color: #333; }
+    .status-failed { background: #dc3545; color: white; }
+    .status-pending { background: #6c757d; color: white; }
+    .status-initializing { background: var(--cyan); color: #333; }
+    .status-generating_report { background: var(--yellow); color: #333; }
+
+    .hidden { display: none !important; }
+
+    .footer-console {
+        text-align: center; margin-top: 30px; padding: 16px;
+        color: var(--muted); font-size: .82em;
+    }
+
+    /* --- 视图切换 --- */
+    .view-tabs {
+        display: flex; gap: 0; margin-bottom: 24px; background: var(--card);
+        border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border);
+    }
+    .view-tab {
+        flex: 1; padding: 14px; text-align: center; cursor: pointer;
+        font-weight: bold; color: var(--muted); transition: all .2s;
+        border: none; background: none; font-size: .95em;
+    }
+    .view-tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .view-tab.active {
+        color: white; background: var(--purple);
+    }
+
+    @media (max-width: 768px) {
+        .status-row { grid-template-columns: 1fr; }
+        .nav-grid { grid-template-columns: 1fr; }
+        .config-grid { grid-template-columns: 1fr; }
+        .template-grid { grid-template-columns: 1fr; }
+        .console-header { flex-direction: column; text-align: center; }
+    }
+    </style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!-- Header 导航 -->
+<!-- ============================================================ -->
+<div class="console-header">
+    <h1>🐉 御龙军虚拟世界 · 实验控制台</h1>
+    <nav class="nav-links" style="display:flex;gap:8px;align-items:center">
+        <a href="/" class="nav-btn">🌍 世界地图</a>
+        <a href="/dashboard" class="nav-btn">📊 仪表盘</a>
+        <a href="/console" class="nav-btn active">🎮 控制台</a>
+        <a href="/demo" class="nav-btn">🎬 演示</a>
+        <a href="/reports" class="nav-btn">📊 报告</a>
+    </nav>
+</div>
+
+<!-- ============================================================ -->
+<!-- 主容器 -->
+<!-- ============================================================ -->
+<div class="console-container">
+
+    <!-- 视图切换：Dashboard / 实验控制台 -->
+    <div class="view-tabs">
+        <button class="view-tab active" onclick="switchView('dashboard', this)">📊 Dashboard</button>
+        <button class="view-tab" onclick="switchView('experiment', this)">🚀 实验控制台</button>
+    </div>
+
+    <!-- ========== Dashboard 视图 ========== -->
+    <div id="viewDashboard">
+
+        <!-- 服务状态 -->
+        <div class="status-row">
+            <div class="status-card">
+                <div class="icon">🌍</div>
+                <div class="name">API 服务</div>
+                <div class="port">v5 API Server</div>
+                <div>
+                    <span class="status-dot" id="dotApi"></span>
+                    <span class="status-text" id="stApi">检测中...</span>
+                </div>
+            </div>
+            <div class="status-card">
+                <div class="icon">📊</div>
+                <div class="name">Web 服务</div>
+                <div class="port">Web Server</div>
+                <div>
+                    <span class="status-dot online" id="dotWeb"></span>
+                    <span class="status-text" id="stWeb">运行中</span>
+                </div>
+            </div>
+            <div class="status-card">
+                <div class="icon">🔬</div>
+                <div class="name">实验引擎</div>
+                <div class="port">Experiment Engine</div>
+                <div>
+                    <span class="status-dot" id="dotExp"></span>
+                    <span class="status-text" id="stExp">检测中...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快捷入口 -->
+        <div class="nav-grid">
+            <a class="nav-card primary" href="javascript:void(0)" onclick="switchView('experiment', document.querySelectorAll('.view-tab')[1])">
+                <div class="card-icon">🚀</div>
+                <div class="card-title">开始实验</div>
+                <div class="card-desc">24 个实验模板 · 6 大分类 · 真实 Agent 演化 · 自动生成商业报告</div>
+            </a>
+            <a class="nav-card" href="/">
+                <div class="card-icon">🌍</div>
+                <div class="card-title">查看世界</div>
+                <div class="card-desc">Agent 实时状态 · 区域地图 · 人口分布 · 经济指标 · 事件流</div>
+            </a>
+            <a class="nav-card" href="/reports">
+                <div class="card-icon">📊</div>
+                <div class="card-title">实验报告</div>
+                <div class="card-desc">查看所有已完成实验的可视化报告、数据下载</div>
+            </a>
+            <a class="nav-card" href="/demo">
+                <div class="card-icon">🎬</div>
+                <div class="card-title">演示模式</div>
+                <div class="card-desc">快速体验虚拟世界的 Agent 演化 Demo</div>
+            </a>
+        </div>
+
+        <!-- 最近实验 -->
+        <div class="section-title">📋 最近实验</div>
+        <div class="dash-panel">
+            <div id="recentExps">
+                <div class="empty-text">暂无实验记录 — 点击「开始实验」创建第一个</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 实验控制台视图 ========== -->
+    <div id="viewExperiment" class="hidden">
+
+        <!-- 步骤条 -->
+        <div class="steps">
+            <div class="step-item">
+                <div class="step-dot active" id="sd1">1</div>
+                <div class="step-label">选模板</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-item">
+                <div class="step-dot" id="sd2">2</div>
+                <div class="step-label">配参数</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-item">
+                <div class="step-dot" id="sd3">3</div>
+                <div class="step-label">运行</div>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step-item">
+                <div class="step-dot" id="sd4">4</div>
+                <div class="step-label">查看结果</div>
+            </div>
+        </div>
+
+        <!-- STEP 1: 选择模板 -->
+        <div class="c-panel" id="step1">
+            <h2>🎯 第 1 步：选择实验模板（24 个场景）</h2>
+            <div class="filter-bar" id="filterBar"></div>
+            <div class="template-grid" id="templateGrid"></div>
+            <div class="actions">
+                <button class="btn btn-primary" id="btnToStep2" disabled onclick="goStep(2)">
+                    下一步：配置参数 →
+                </button>
+            </div>
+        </div>
+
+        <!-- STEP 2: 配置参数 -->
+        <div class="c-panel hidden" id="step2">
+            <h2>⚙️ 第 2 步：描述你的项目 & 配置参数</h2>
+
+            <!-- 用户自定义区（紫色渐变边框卡片） -->
+            <div class="user-context-box">
+                <h3>📝 你的项目信息（选填但强烈建议填写）</h3>
+                <div class="config-group" style="margin-bottom:16px;">
+                    <label>📄 项目/产品/政策描述</label>
+                    <textarea id="cfgDescription" rows="4"
+                        placeholder="例如：我们正在开发一款面向 Z 世代的社交健身 App，主打运动打卡 + 社交分享，计划 Q3 上线..."></textarea>
+                    <div style="display:flex; align-items:center; margin-top:10px; gap:10px;">
+                        <button class="smart-btn" id="btnSmartAnalyze" onclick="smartAnalyze()">🤖 智能分析（根据描述自动填充下方字段）</button>
+                        <span class="analyze-status" id="analyzeStatus"></span>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                    <div class="config-group">
+                        <label>🎯 最关注的指标（你最想看什么结果）</label>
+                        <textarea id="cfgFocusMetrics" rows="2"
+                            placeholder="例如：用户留存率、月活增长、付费转化率、口碑传播系数"></textarea>
+                    </div>
+                    <div class="config-group">
+                        <label>✅ 期望达到的目标效果</label>
+                        <textarea id="cfgGoals" rows="2"
+                            placeholder="例如：6 个月内月活突破 50 万、留存率 > 40%、付费率 > 5%"></textarea>
+                    </div>
+                </div>
+                <div class="config-group" style="margin-top:15px;">
+                    <label>⚠️ 特别担心的风险（可选）</label>
+                    <input id="cfgRisks" type="text" placeholder="例如：竞品抄袭、用户增长瓶颈、资金链断裂">
+                </div>
+            </div>
+
+            <!-- 演化参数 -->
+            <h3 style="color:var(--purple); margin-bottom:14px;">🔧 演化参数</h3>
+            <div class="config-grid">
+                <div class="config-group">
+                    <label>👥 Agent 数量</label>
+                    <select id="cfgAgents">
+                        <option value="200">200（极速测试，~30秒）</option>
+                        <option value="500">500（快速测试，~1分钟）</option>
+                        <option value="1000" selected>1,000（标准，~2分钟）</option>
+                        <option value="3000">3,000（精确，~5分钟）</option>
+                        <option value="5000">5,000（高精度，~10分钟）</option>
+                        <option value="10000">10,000（专业级，~20分钟）</option>
+                    </select>
+                </div>
+                <div class="config-group">
+                    <label>⏱️ 演化时长</label>
+                    <select id="cfgDuration">
+                        <option value="6">6 个月（快速验证）</option>
+                        <option value="12" selected>12 个月（标准周期）</option>
+                        <option value="24">24 个月（中期趋势）</option>
+                        <option value="60">60 个月（长期分析）</option>
+                        <option value="120">120 个月（深度研究）</option>
+                    </select>
+                </div>
+                <div class="config-group">
+                    <label>⚡ 时间倍速</label>
+                    <select id="cfgSpeed">
+                        <option value="1">1x（实时）</option>
+                        <option value="2">2x</option>
+                        <option value="5">5x</option>
+                        <option value="10" selected>10x</option>
+                        <option value="50">50x</option>
+                        <option value="100">100x</option>
+                    </select>
+                </div>
+                <div class="config-group">
+                    <label>🔬 A/B 对比测试</label>
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:5px;">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:.9em;">
+                            <input type="checkbox" id="cfgABTest" onchange="toggleABConfig()"> 启用 A/B 对比
+                        </label>
+                    </div>
+                    <div id="abConfigPanel" style="display:none;margin-top:10px;padding:12px;background:rgba(102,126,234,0.08);border:1px solid rgba(102,126,234,0.2);border-radius:8px;">
+                        <label style="font-size:.85em;color:var(--text2);">对照组描述（B 组，默认无干预）</label>
+                        <textarea id="cfgABVariant" rows="2" placeholder="例如：不做任何营销推广，保持自然增长" style="width:100%;padding:8px;border:1px solid rgba(255,255,255,0.15);border-radius:6px;background:rgba(255,255,255,0.06);color:var(--text);font-size:.9em;margin-top:4px;resize:vertical;"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="config-summary" id="configSummary"></div>
+            <div class="actions">
+                <button class="btn btn-secondary" onclick="goStep(1)">← 返回选模板</button>
+                <button class="btn btn-primary" onclick="startExperiment()">🚀 启动实验</button>
+            </div>
+        </div>
+
+        <!-- STEP 3: 执行进度 -->
+        <div class="c-panel hidden" id="step3">
+            <div class="progress-container">
+                <h2 style="color:var(--purple);">🔬 实验执行中</h2>
+                <div class="progress-pct" id="pctText">0%</div>
+                <div class="progress-bar-wrap"><div class="progress-fill" id="progressFill"></div></div>
+                <div class="progress-stage" id="stageText">准备中...</div>
+                <div style="margin-top:18px; color:var(--muted);" id="expIdText"></div>
+            </div>
+        </div>
+
+        <!-- STEP 4: 报告 -->
+        <div class="c-panel hidden" id="step4">
+            <h2>📊 实验报告</h2>
+            <div class="report-actions">
+                <button class="btn btn-primary" onclick="goStep(1)">🔄 启动新实验</button>
+                <button class="btn btn-secondary" onclick="downloadReport('excel')">📥 下载报告</button>
+                <button class="btn btn-secondary" id="btnVisual" style="display:none" onclick="openVisualReport()">📊 查看可视化报告</button>
+                <button class="btn btn-secondary" id="btnCSV" style="display:none" onclick="downloadCSV()">📈 下载月度数据CSV</button>
+            </div>
+            <div class="report-box" id="reportContent"></div>
+        </div>
+
+        <!-- 实验历史 -->
+        <div class="c-panel" style="margin-top:16px;">
+            <h2>📋 实验历史</h2>
+            <div class="exp-list" id="expList">
+                <p style="color:var(--muted); text-align:center;">暂无实验记录</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-console">
+        御龙军虚拟世界 v5.0 · Powered by DeepIntegrationEngine
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- JavaScript -->
+<!-- ============================================================ -->
+<script>
+// ---- 分类映射 ----
+const catMap = {
+    "education": {"icon": "📚", "label": "教育"},
+    "business": {"icon": "💼", "label": "商业"},
+    "policy": {"icon": "🏛️", "label": "政策"},
+    "social": {"icon": "👥", "label": "社会"},
+    "health": {"icon": "🏥", "label": "健康"},
+    "tech": {"icon": "💻", "label": "科技"}
+};
+
+// ---- 模板预设文字 ----
+const PRESETS = {
+    'biz_001': { desc: '我们计划推出一款新产品/服务，目标市场为[请填写目标人群]，定价约[X]元，主打[核心卖点]。', focus: '市场渗透率、用户增长率、客户满意度、利润率、复购率', goals: '上线6个月内获得[X]名付费用户，月营收突破[X]万元', risks: '竞品模仿、获客成本过高、用户留存不足' },
+    'biz_002': { desc: '我们正在对比两种营销策略：[策略A] vs [策略B]，预算各[X]万元。', focus: '转化率、客户获取成本(CAC)、品牌知名度、ROI', goals: 'ROI达到3倍以上，单个获客成本控制在[X]元以内', risks: '预算浪费、渠道效果不达预期' },
+    'biz_003': { desc: '公司正在进行[数字化转型/组织架构调整]，涉及[X]名员工。', focus: '员工满意度、离职率、生产率、变革接受度', goals: '变革后生产率提升20%，员工满意度>70分', risks: '员工抵触、关键人才流失' },
+    'biz_004': { desc: '在[城市/地区]建设创业孵化器，目标吸引[X]个创业团队。', focus: '创业率、初创企业存活率、创新指数、就业创造数', goals: '3年内孵化[X]家企业，存活率>60%', risks: '优质项目不足、资金回报周期长' },
+    'edu_001': { desc: '在[地区]推行[教育政策/课程改革]，覆盖[X]所学校。', focus: '升学率、就业率、平均收入、教育满意度', goals: '升学率提升至70%以上，就业率>90%', risks: '师资不足、执行阻力、资金不到位' },
+    'edu_002': { desc: '研究[地区/群体]的教育公平问题。', focus: '阶层流动性、教育基尼系数、奖学金覆盖率', goals: '阶层流动性提升至30%以上', risks: '数据偏差、政策执行不力' },
+    'edu_003': { desc: '评估在线教育平台对传统教育的影响。', focus: '在线课程注册率、学习效果、完课率、成本效益', goals: '在线学习效果达到线下80%以上', risks: '学习效果不佳、数字鸿沟' },
+    'edu_004': { desc: '推动终身学习文化，为在职人员提供技能培训。', focus: '成人学习参与率、职业转换率、收入增长', goals: '成人学习参与率达50%', risks: '学习动力不足、时间冲突' },
+    'pol_001': { desc: '评估税收政策调整对经济和社会的影响。', focus: 'GDP增长、贫富差距(基尼系数)、税收收入', goals: 'GDP增长3%以上，基尼系数降至0.35以下', risks: '资本外流、企业外迁' },
+    'pol_002': { desc: '试行全民基本收入(UBI)，每人每月发放[X]元。', focus: '就业率、贫困率、幸福感、创业率', goals: '贫困率降至5%以下', risks: '通胀、财政压力、工作积极性下降' },
+    'pol_003': { desc: '推行住房政策，目标解决[X]万人的住房问题。', focus: '房价收入比、住房自有率、租房负担率', goals: '房价收入比降至5以下', risks: '房价扭曲、市场扭曲' },
+    'pol_004': { desc: '推行医疗改革方案，覆盖[X]万人。', focus: '人均医疗支出、预期寿命、满意度', goals: '预期寿命提升至82岁', risks: '财政负担、医疗资源不足' },
+    'soc_001': { desc: '模拟城市化进程，研究人口迁移影响。', focus: '城市化率、城乡收入差距、通勤时间', goals: '城市化率达75%', risks: '城市病、农村空心化' },
+    'soc_002': { desc: '研究人口老龄化趋势及影响。', focus: '抚养比、养老金可持续性、医疗支出', goals: '养老金可持续性>80%', risks: '劳动力短缺、养老金缺口' },
+    'soc_003': { desc: '研究影响社会阶层流动的因素。', focus: '代际收入弹性、教育流动性、职业流动性', goals: '代际收入弹性降至0.3以下', risks: '数据局限、政策滞后' },
+    'soc_004': { desc: '模拟多元文化融合过程。', focus: '文化多样性指数、社会凝聚力、歧视事件率', goals: '社会凝聚力>70分', risks: '文化冲突、极端主义' },
+    'hlt_001': { desc: '模拟传染病在人群中的传播。', focus: '感染率、死亡率、医疗挤兑程度', goals: '感染率控制在30%以下', risks: '变异、防控疲劳' },
+    'hlt_002': { desc: '研究工作压力对心理健康的影响。', focus: '抑郁率、焦虑率、心理治疗覆盖率', goals: '抑郁率控制在10%以下', risks: '污名化、资源不足' },
+    'hlt_003': { desc: '推广健康生活方式干预计划。', focus: '肥胖率、运动参与率、慢性病发病率', goals: '肥胖率降至20%以下', risks: '依从性差、效果滞后' },
+    'hlt_004': { desc: '优化医疗资源分配。', focus: '等待时间、治疗可及性、健康结果', goals: '平均等待时间<30分钟', risks: '资源争夺、技术障碍' },
+    'tech_001': { desc: '研究新技术在行业中的扩散规律。', focus: '采用率、扩散速度、创新者比例', goals: '技术采用率达70%', risks: '技术壁垒、成本过高' },
+    'tech_002': { desc: '评估AI自动化对就业的影响。', focus: '失业率、生产率、收入不平等', goals: '失业率控制在6%以下', risks: '大规模失业、技能断层' },
+    'tech_003': { desc: '研究社交媒体对舆论的影响。', focus: '信息传播速度、极化程度、假新闻比例', goals: '社会极化程度<0.4', risks: '信息茧房、极端化' },
+    'tech_004': { desc: '模拟绿色技术转型路径。', focus: '碳排放量、绿色就业数、转型成本', goals: '碳排放减少50%', risks: '转型成本过高、能源安全' }
+};
+
+const CAT_PRESETS = {
+    'business': { desc: '我们计划推出一款新产品/服务...', focus: '市场渗透率、用户增长率、客户满意度', goals: '6个月内达到核心目标', risks: '竞品、获客成本、留存' },
+    'education': { desc: '我们计划推行一项教育改革...', focus: '升学率、就业率、学习效果', goals: '提升教育质量和公平性', risks: '执行阻力、资金、效果滞后' },
+    'policy': { desc: '我们计划推行一项公共政策...', focus: 'GDP、就业率、公平性指标', goals: '改善社会经济指标', risks: '政治阻力、执行偏差' },
+    'social': { desc: '研究某个社会现象/趋势...', focus: '社会流动性、公平性、幸福感', goals: '促进社会和谐发展', risks: '数据偏差、文化因素' },
+    'health': { desc: '推行一项健康干预/医疗改革...', focus: '发病率、治疗率、医疗支出', goals: '改善人群健康水平', risks: '依从性、资源不足' },
+    'tech': { desc: '研究一项新技术的影响/推广...', focus: '采用率、生产率、就业影响', goals: '促进技术进步和产业升级', risks: '技术壁垒、社会冲击' }
+};
+
+// ---- 状态变量 ----
+let templates = [];
+let selectedTemplate = null;
+let currentExpId = null;
+let pollTimer = null;
+
+// ============================================================
+// 视图切换
+// ============================================================
+function switchView(view, tabEl) {
+    document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+    tabEl.classList.add('active');
+    document.getElementById('viewDashboard').classList.toggle('hidden', view !== 'dashboard');
+    document.getElementById('viewExperiment').classList.toggle('hidden', view !== 'experiment');
+}
+
+// ============================================================
+// Dashboard: 服务状态检测
+// ============================================================
+function checkApiStatus() {
+    fetch('/api/stats', { signal: AbortSignal.timeout(3000) })
+        .then(r => {
+            if (r.ok) {
+                document.getElementById('dotApi').classList.add('online');
+                document.getElementById('dotApi').classList.remove('offline');
+                document.getElementById('stApi').textContent = '运行中';
+                document.getElementById('dotExp').classList.add('online');
+                document.getElementById('dotExp').classList.remove('offline');
+                document.getElementById('stExp').textContent = '就绪';
+            } else { throw new Error(); }
+        })
+        .catch(() => {
+            document.getElementById('dotApi').classList.add('offline');
+            document.getElementById('dotApi').classList.remove('online');
+            document.getElementById('stApi').textContent = '未启动';
+            document.getElementById('dotExp').classList.add('offline');
+            document.getElementById('dotExp').classList.remove('online');
+            document.getElementById('stExp').textContent = '未知';
+        });
+}
+
+// ============================================================
+// Dashboard: 最近实验
+// ============================================================
+function loadRecentExps() {
+    fetch('/api/v1/experiments').then(r => r.json()).then(data => {
+        const list = (data.experiments || []).slice(-5).reverse();
+        const el = document.getElementById('recentExps');
+        if (list.length === 0) {
+            el.innerHTML = '<div class="empty-text">暂无实验记录 — 点击「开始实验」创建第一个</div>';
+            return;
+        }
+        el.innerHTML = list.map(e => {
+            const statusMap = {
+                completed: ['已完成', 'badge-ok'],
+                running: ['执行中', 'badge-run'],
+                failed: ['失败', 'badge-fail'],
+                pending: ['等待中', ''],
+                initializing: ['初始化', 'badge-run'],
+                generating_report: ['生成报告', 'badge-run']
+            };
+            const [label, cls] = statusMap[e.status] || [e.status, ''];
+            return '<div class="recent-item">' +
+                '<div><div class="recent-name">' + (e.template_name || e.experiment_id) + '</div>' +
+                '<div class="recent-meta">' + e.experiment_id + ' | ' +
+                (e.agent_count || 0).toLocaleString() + ' Agent | ' + (e.duration_months || 0) + '月</div></div>' +
+                '<span class="badge ' + cls + '">' + label + ' ' + (e.progress || 0) + '%</span></div>';
+        }).join('');
+    }).catch(() => {});
+}
+
+// ============================================================
+// 实验控制台: 模板
+// ============================================================
+function loadTemplates() {
+    fetch('/api/v1/templates').then(r => r.json()).then(data => {
+        templates = data.templates || [];
+        renderFilters();
+        renderTemplates(templates);
+    }).catch(() => {
+        document.getElementById('templateGrid').innerHTML =
+            '<div class="empty-text">⚠️ 无法加载模板，请确认 API 服务已启动</div>';
+    });
+}
+
+function renderFilters() {
+    const cats = [...new Set(templates.map(t => t.category))];
+    let html = '<button class="filter-btn active" onclick="filterCat(null, this)">全部 (' + templates.length + ')</button>';
+    cats.forEach(c => {
+        const info = catMap[c] || { icon: '📁', label: c };
+        const count = templates.filter(t => t.category === c).length;
+        html += '<button class="filter-btn" onclick="filterCat(\'' + c + '\', this)">' + info.icon + ' ' + info.label + ' (' + count + ')</button>';
+    });
+    document.getElementById('filterBar').innerHTML = html;
+}
+
+function filterCat(cat, el) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    const filtered = cat ? templates.filter(t => t.category === cat) : templates;
+    renderTemplates(filtered);
+}
+
+function renderTemplates(list) {
+    const grid = document.getElementById('templateGrid');
+    if (list.length === 0) {
+        grid.innerHTML = '<div class="empty-text">该分类暂无模板</div>';
+        return;
+    }
+    grid.innerHTML = list.map(t => {
+        const info = catMap[t.category] || { icon: '📁', label: t.category };
+        const sel = selectedTemplate && selectedTemplate.template_id === t.template_id ? ' selected' : '';
+        return '<div class="tpl-card' + sel + '" onclick="selectTpl(\'' + t.template_id + '\', this)">' +
+            '<span class="cat-badge">' + info.icon + ' ' + info.label + '</span>' +
+            '<div class="tpl-name">' + t.name + '</div>' +
+            '<div class="tpl-desc">' + t.description + '</div>' +
+            '<div class="tpl-meta">⏱️ ' + t.duration_months + '月 | 👥 推荐' + t.agent_count.toLocaleString() + ' Agent</div>' +
+            '<div class="tpl-metrics">📈 指标：' + t.key_metrics.join('、') + '</div>' +
+            '</div>';
+    }).join('');
+}
+
+function selectTpl(id, el) {
+    selectedTemplate = templates.find(t => t.template_id === id);
+    document.querySelectorAll('.tpl-card').forEach(c => c.classList.remove('selected'));
+    if (el) el.classList.add('selected');
+    document.getElementById('btnToStep2').disabled = false;
+}
+
+// ============================================================
+// 步骤导航
+// ============================================================
+function goStep(n) {
+    for (let i = 1; i <= 4; i++) {
+        document.getElementById('step' + i).classList.toggle('hidden', i !== n);
+        const dot = document.getElementById('sd' + i);
+        dot.classList.remove('active', 'done');
+        if (i < n) dot.classList.add('done');
+        if (i === n) dot.classList.add('active');
+    }
+    if (n === 2 && selectedTemplate) {
+        const preset = PRESETS[selectedTemplate.template_id] || CAT_PRESETS[selectedTemplate.category] || {};
+        const descEl = document.getElementById('cfgDescription');
+        const focusEl = document.getElementById('cfgFocusMetrics');
+        const goalsEl = document.getElementById('cfgGoals');
+        const risksEl = document.getElementById('cfgRisks');
+        if (!descEl.value.trim()) descEl.value = preset.desc || '';
+        if (!focusEl.value.trim()) focusEl.value = preset.focus || '';
+        if (!goalsEl.value.trim()) goalsEl.value = preset.goals || '';
+        if (!risksEl.value.trim()) risksEl.value = preset.risks || '';
+        updateConfigSummary();
+    }
+}
+
+function toggleABConfig() {
+    const panel = document.getElementById('abConfigPanel');
+    const checked = document.getElementById('cfgABTest').checked;
+    panel.style.display = checked ? 'block' : 'none';
+}
+
+function updateConfigSummary() {
+    if (!selectedTemplate) return;
+    const agents = document.getElementById('cfgAgents').value;
+    const dur = document.getElementById('cfgDuration').value;
+    const speed = document.getElementById('cfgSpeed').value;
+    const desc = document.getElementById('cfgDescription').value.trim();
+    const focus = document.getElementById('cfgFocusMetrics').value.trim();
+    const goals = document.getElementById('cfgGoals').value.trim();
+    let html = '<h3>📋 实验概要</h3>' +
+        '<div class="row"><span>模板</span><span>' + selectedTemplate.name + '</span></div>' +
+        '<div class="row"><span>分类</span><span>' + selectedTemplate.category + '</span></div>' +
+        '<div class="row"><span>Agent 数量</span><span>' + parseInt(agents).toLocaleString() + '</span></div>' +
+        '<div class="row"><span>演化时长</span><span>' + dur + ' 个月</span></div>' +
+        '<div class="row"><span>时间倍速</span><span>' + speed + 'x</span></div>' +
+        '<div class="row"><span>模板指标</span><span>' + selectedTemplate.key_metrics.join('、') + '</span></div>';
+    if (desc) html += '<div class="row"><span>📄 项目描述</span><span style="max-width:400px;text-align:right;">' + desc.substring(0, 80) + (desc.length > 80 ? '...' : '') + '</span></div>';
+    if (focus) html += '<div class="row"><span>🎯 关注指标</span><span>' + focus + '</span></div>';
+    if (goals) html += '<div class="row"><span>✅ 目标效果</span><span>' + goals + '</span></div>';
+    document.getElementById('configSummary').innerHTML = html;
+}
+
+// 输入框变化时自动刷新概要
+['cfgDescription', 'cfgFocusMetrics', 'cfgGoals', 'cfgAgents', 'cfgDuration', 'cfgSpeed'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('input', updateConfigSummary);
+        el.addEventListener('change', updateConfigSummary);
+    }
+});
+
+// 智能分析（含前端关键词匹配回退）
+function smartAnalyze() {
+    const desc = document.getElementById('cfgDescription').value.trim();
+    if (!desc || desc.length < 10) {
+        alert('请先输入至少10个字的项目描述');
+        return;
+    }
+    const btn = document.getElementById('btnSmartAnalyze');
+    btn.disabled = true;
+    document.getElementById('analyzeStatus').textContent = '🔄 分析中...';
+
+    // 先尝试 API 智能分析
+    fetch('/api/v1/smart_analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            description: desc,
+            template_id: selectedTemplate ? selectedTemplate.template_id : ''
+        }),
+        signal: AbortSignal.timeout(8000)
+    }).then(r => r.json()).then(data => {
+        if (data.focus_metrics) document.getElementById('cfgFocusMetrics').value = data.focus_metrics;
+        if (data.goals) document.getElementById('cfgGoals').value = data.goals;
+        if (data.risks) document.getElementById('cfgRisks').value = data.risks;
+        // 如果 API 推荐了模板，高亮提示
+        if (data.recommended_template && !selectedTemplate) {
+            document.getElementById('analyzeStatus').textContent = '✅ 已自动填充 | 推荐模板: ' + data.recommended_template;
+        } else {
+            document.getElementById('analyzeStatus').textContent = '✅ 已自动填充';
+        }
+        updateConfigSummary();
+        btn.disabled = false;
+        setTimeout(() => { document.getElementById('analyzeStatus').textContent = ''; }, 5000);
+    }).catch(() => {
+        // API 不可用 → 前端关键词匹配回退
+        const result = localSmartAnalyze(desc);
+        if (result.focus) document.getElementById('cfgFocusMetrics').value = result.focus;
+        if (result.goals) document.getElementById('cfgGoals').value = result.goals;
+        if (result.risks) document.getElementById('cfgRisks').value = result.risks;
+        document.getElementById('analyzeStatus').textContent = '✅ 已智能填充（本地分析）';
+        updateConfigSummary();
+        btn.disabled = false;
+        setTimeout(() => { document.getElementById('analyzeStatus').textContent = ''; }, 5000);
+    });
+}
+
+// 前端关键词匹配分析
+function localSmartAnalyze(desc) {
+    const d = desc.toLowerCase();
+    const result = { focus: '', goals: '', risks: '', recommendedTemplates: [] };
+
+    // 关键词 → 指标/目标/风险映射
+    const rules = [
+        {
+            keywords: ['app', '应用', '产品', '上线', '用户', '社交', '健身', '电商', '平台'],
+            focus: '用户留存率、月活增长率、付费转化率、DAU/MAU',
+            goals: '6个月内获得目标用户量，留存率>40%，付费率>5%',
+            risks: '竞品抄袭、获客成本过高、用户留存不足',
+            templates: ['biz_001']
+        },
+        {
+            keywords: ['营销', '推广', '广告', '品牌', '渠道', '获客'],
+            focus: '转化率、客户获取成本(CAC)、品牌知名度、ROI',
+            goals: 'ROI达到3倍以上，单个获客成本可控',
+            risks: '预算浪费、渠道效果不达预期',
+            templates: ['biz_002']
+        },
+        {
+            keywords: ['教育', '学校', '学生', '课程', '培训', '教学', '学习'],
+            focus: '升学率、学习效果、课程完成率、教育满意度',
+            goals: '提升教育质量和公平性，学习效果显著提升',
+            risks: '师资不足、执行阻力、效果滞后',
+            templates: ['edu_001', 'edu_003']
+        },
+        {
+            keywords: ['政策', '税收', '补贴', '法规', '改革', '公共'],
+            focus: 'GDP增长、就业率、公平性指标、社会满意度',
+            goals: '改善社会经济指标，减少不平等',
+            risks: '政治阻力、执行偏差、意外后果',
+            templates: ['pol_001']
+        },
+        {
+            keywords: ['健康', '医疗', '疫情', '传染病', '心理', '医院'],
+            focus: '发病率、治疗率、医疗可及性、健康结果',
+            goals: '改善人群健康水平，降低发病率',
+            risks: '资源不足、依从性差、效果滞后',
+            templates: ['hlt_001', 'hlt_004']
+        },
+        {
+            keywords: ['ai', '人工智能', '技术', '自动化', '创新', '数字化'],
+            focus: '技术采用率、生产率提升、就业影响、创新指数',
+            goals: '促进技术进步和产业升级',
+            risks: '技术壁垒、失业冲击、伦理风险',
+            templates: ['tech_001', 'tech_002']
+        },
+        {
+            keywords: ['社交', '媒体', '舆论', '传播', '信息'],
+            focus: '信息传播速度、用户参与度、极化程度',
+            goals: '提升正面传播效果，控制负面影响',
+            risks: '信息茧房、极端化、假新闻',
+            templates: ['tech_003']
+        },
+        {
+            keywords: ['城市', '人口', '迁移', '城市化', '房价', '住房'],
+            focus: '城市化率、城乡收入差距、住房可及性',
+            goals: '促进均衡发展，改善居住条件',
+            risks: '城市病、农村空心化、房价泡沫',
+            templates: ['soc_001', 'pol_003']
+        },
+        {
+            keywords: ['创业', '孵化', '投资', '融资', '初创'],
+            focus: '创业率、初创企业存活率、创新指数、就业创造数',
+            goals: '3年内孵化目标数量企业，存活率>60%',
+            risks: '优质项目不足、资金回报周期长',
+            templates: ['biz_004']
+        },
+        {
+            keywords: ['老龄', '养老', '退休', '老年'],
+            focus: '抚养比、养老金可持续性、医疗支出',
+            goals: '养老金可持续性>80%',
+            risks: '劳动力短缺、养老金缺口',
+            templates: ['soc_002']
+        },
+        {
+            keywords: ['绿色', '碳', '环保', '能源', '可持续'],
+            focus: '碳排放量、绿色就业数、转型成本',
+            goals: '碳排放减少50%',
+            risks: '转型成本过高、能源安全',
+            templates: ['tech_004']
+        }
+    ];
+
+    let bestMatch = null;
+    let bestScore = 0;
+    for (const rule of rules) {
+        const score = rule.keywords.filter(k => d.includes(k)).length;
+        if (score > bestScore) {
+            bestScore = score;
+            bestMatch = rule;
+        }
+    }
+
+    if (bestMatch && bestScore > 0) {
+        result.focus = bestMatch.focus;
+        result.goals = bestMatch.goals;
+        result.risks = bestMatch.risks;
+        result.recommendedTemplates = bestMatch.templates;
+    } else {
+        // 通用回退
+        result.focus = '市场渗透率、用户增长率、投资回报率';
+        result.goals = '达到预期目标，实现可持续增长';
+        result.risks = '市场竞争、执行风险、资源不足';
+    }
+
+    return result;
+}
+
+// ============================================================
+// 启动实验
+// ============================================================
+function startExperiment() {
+    if (!selectedTemplate) return alert('请先选择模板');
+    const agents = parseInt(document.getElementById('cfgAgents').value);
+    const dur = parseInt(document.getElementById('cfgDuration').value);
+    const speed = parseInt(document.getElementById('cfgSpeed').value);
+    const description = document.getElementById('cfgDescription').value.trim();
+    const focus_metrics = document.getElementById('cfgFocusMetrics').value.trim();
+    const goals = document.getElementById('cfgGoals').value.trim();
+    const risks = document.getElementById('cfgRisks').value.trim();
+
+    goStep(3);
+
+    fetch('/api/v1/experiments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            template_id: selectedTemplate.template_id,
+            agent_count: agents,
+            duration_months: dur,
+            speed: speed,
+            user_context: { description, focus_metrics, goals, risks }
+        })
+    }).then(r => r.json()).then(data => {
+        if (data.experiment_id) {
+            currentExpId = data.experiment_id;
+            document.getElementById('expIdText').textContent = '实验 ID: ' + currentExpId;
+            startPolling();
+        } else {
+            alert('创建失败: ' + (data.error || '未知错误'));
+            goStep(2);
+        }
+    }).catch(err => {
+        alert('请求失败: ' + err);
+        goStep(2);
+    });
+}
+
+function startPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(pollProgress, 1500);
+}
+
+function pollProgress() {
+    if (!currentExpId) return;
+    fetch('/api/v1/experiments/' + currentExpId).then(r => r.json()).then(exp => {
+        const pct = exp.progress || 0;
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('pctText').textContent = pct + '%';
+        document.getElementById('stageText').textContent = exp.stage || '执行中...';
+
+        if (exp.status === 'completed') {
+            clearInterval(pollTimer);
+            showReport(exp);
+        } else if (exp.status === 'failed') {
+            clearInterval(pollTimer);
+            alert('实验失败: ' + (exp.error || '').substring(0, 200));
+            goStep(2);
+        }
+    }).catch(() => {});
+}
+
+function showReport(exp) {
+    goStep(4);
+    document.getElementById('reportContent').textContent = exp.report_content || '报告生成中...';
+    if (exp.html_report_path) {
+        document.getElementById('btnVisual').style.display = 'inline-block';
+    }
+    if (exp.user_report_files) {
+        document.getElementById('btnCSV').style.display = 'inline-block';
+    }
+    refreshHistory();
+}
+
+function openVisualReport() {
+    if (currentExpId) window.open('/api/v1/experiments/' + currentExpId + '/report?type=html', '_blank');
+}
+
+function downloadCSV() {
+    if (currentExpId) window.open('/api/v1/experiments/' + currentExpId + '/report?type=csv', '_blank');
+}
+
+function downloadReport(type) {
+    if (!currentExpId) return;
+    window.open('/api/v1/experiments/' + currentExpId + '/report?type=' + (type || 'excel'), '_blank');
+}
+
+// ============================================================
+// 实验历史
+// ============================================================
+function refreshHistory() {
+    fetch('/api/v1/experiments').then(r => r.json()).then(data => {
+        const list = data.experiments || [];
+        const el = document.getElementById('expList');
+        if (list.length === 0) {
+            el.innerHTML = '<p style="color:var(--muted); text-align:center;">暂无实验记录</p>';
+            return;
+        }
+        el.innerHTML = list.map(e => {
+            const statusClass = 'status-' + e.status;
+            const statusText = {
+                completed: '已完成', running: '执行中', failed: '失败', pending: '等待中',
+                initializing: '初始化', generating_report: '生成报告'
+            }[e.status] || e.status;
+            return '<div class="exp-item">' +
+                '<div><strong style="color:var(--text)">' + e.experiment_id + '</strong><br>' +
+                '<span style="color:var(--muted);font-size:.85em">' +
+                (e.template_name || '') + ' | ' + (e.agent_count || 0).toLocaleString() + ' Agent | ' + (e.duration_months || 0) + '月</span></div>' +
+                '<div style="display:flex;gap:8px;align-items:center">' +
+                '<span class="status-badge ' + statusClass + '">' + statusText + ' ' + (e.progress || 0) + '%</span>' +
+                (e.status === 'completed' ? '<button class="btn btn-secondary" style="padding:5px 10px;font-size:.82em" onclick="viewReport(\'' + e.experiment_id + '\')">查看报告</button>' : '') +
+                '</div></div>';
+        }).join('');
+    }).catch(() => {});
+}
+
+function viewReport(expId) {
+    currentExpId = expId;
+    switchView('experiment', document.querySelectorAll('.view-tab')[1]);
+    fetch('/api/v1/experiments/' + expId).then(r => r.json()).then(exp => {
+        if (exp.user_report_files || exp.report_content) showReport(exp);
+        else alert('报告不可用');
+    }).catch(() => alert('获取报告失败'));
+}
+
+// ============================================================
+// 初始化
+// ============================================================
+window.addEventListener('DOMContentLoaded', function() {
+    checkApiStatus();
+    loadRecentExps();
+    loadTemplates();
+    refreshHistory();
+
+    // 定时刷新
+    setInterval(() => {
+        checkApiStatus();
+        loadRecentExps();
+    }, 15000);
+
+    setInterval(refreshHistory, 10000);
+});
+</script>
+</body>
+</html>

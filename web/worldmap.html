@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌍 世界地图 - 御龙军虚拟 Agent 世界</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        /* ---- Reset & Variables (match main theme) ---- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0f0e17;
+            --bg2: #1a1a2e;
+            --card: #16213e;
+            --purple: #667eea;
+            --violet: #764ba2;
+            --pink: #e84393;
+            --cyan: #00cec9;
+            --green: #00b894;
+            --yellow: #fdcb6e;
+            --red: #d63031;
+            --orange: #e17055;
+            --text: #edf2f7;
+            --text2: #a0aec0;
+            --muted: #718096;
+            --border: rgba(102, 126, 234, 0.2);
+            --radius: 12px;
+        }
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ---- Header ---- */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 24px;
+            background: linear-gradient(135deg, var(--bg2), var(--card));
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            position: relative;
+        }
+        .header h1 {
+            font-size: 1.2em;
+            background: linear-gradient(135deg, var(--purple), var(--violet));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header-nav {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .nav-btn {
+            padding: 6px 14px;
+            background: rgba(102, 126, 234, 0.15);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text2);
+            font-size: 0.82em;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .nav-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+            color: var(--text);
+            border-color: var(--purple);
+        }
+        .nav-btn.active {
+            background: rgba(102, 126, 234, 0.25);
+            color: var(--purple);
+            border-color: var(--purple);
+        }
+
+        /* ---- Map Container ---- */
+        #map {
+            width: 100%;
+            height: calc(100vh - 92px);
+        }
+
+        /* ---- Stats Overlay ---- */
+        .stats-overlay {
+            position: absolute;
+            top: 102px;
+            left: 16px;
+            z-index: 999;
+            background: rgba(22, 33, 62, 0.92);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 18px;
+            min-width: 200px;
+        }
+        .stats-title {
+            font-size: 0.85em;
+            color: var(--purple);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 3px 0;
+            font-size: 0.78em;
+        }
+        .stats-label { color: var(--text2); }
+        .stats-value { color: var(--text); font-weight: 600; }
+
+        /* ---- Legend Overlay ---- */
+        .legend-overlay {
+            position: absolute;
+            bottom: 24px;
+            left: 16px;
+            z-index: 999;
+            background: rgba(22, 33, 62, 0.92);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px 16px;
+        }
+        .legend-title {
+            font-size: 0.78em;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 2px 0;
+            font-size: 0.75em;
+            color: var(--text2);
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* ---- Country Popup ---- */
+        .country-popup {
+            max-width: 380px;
+            max-height: 400px;
+        }
+        .country-popup h3 {
+            font-size: 1em;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+        .country-popup .pop-stats {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .country-popup .pop-stat {
+            font-size: 0.78em;
+            color: var(--text2);
+        }
+        .country-popup .pop-stat b {
+            color: var(--purple);
+        }
+        .agent-list-scroll {
+            max-height: 260px;
+            overflow-y: auto;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 6px;
+        }
+        .agent-list-scroll::-webkit-scrollbar { width: 4px; }
+        .agent-list-scroll::-webkit-scrollbar-thumb { background: var(--purple); border-radius: 2px; }
+        .agent-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 2px;
+            font-size: 0.78em;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .agent-item:last-child { border-bottom: none; }
+        .agent-occ-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .agent-name { color: var(--text); font-weight: 500; }
+        .agent-info { color: var(--muted); font-size: 0.9em; }
+
+        /* ---- Leaflet Overrides (dark theme) ---- */
+        .leaflet-popup-content-wrapper {
+            background: rgba(22, 33, 62, 0.95) !important;
+            color: var(--text) !important;
+            border-radius: var(--radius) !important;
+            border: 1px solid var(--border) !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+        }
+        .leaflet-popup-tip {
+            background: rgba(22, 33, 62, 0.95) !important;
+            border: 1px solid var(--border) !important;
+        }
+        .leaflet-popup-close-button {
+            color: var(--muted) !important;
+            font-size: 18px !important;
+        }
+        .leaflet-popup-close-button:hover {
+            color: var(--text) !important;
+        }
+        .leaflet-control-zoom a {
+            background: rgba(22, 33, 62, 0.9) !important;
+            color: var(--text) !important;
+            border-color: var(--border) !important;
+        }
+        .leaflet-control-zoom a:hover {
+            background: var(--card) !important;
+        }
+        .leaflet-control-attribution {
+            background: rgba(15, 14, 23, 0.7) !important;
+            color: var(--muted) !important;
+            font-size: 10px !important;
+        }
+        .leaflet-control-attribution a {
+            color: var(--purple) !important;
+        }
+
+        /* ---- Bubble Marker ---- */
+        .bubble-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: #fff;
+            font-weight: 700;
+            font-size: 13px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        .bubble-marker:hover {
+            transform: scale(1.15);
+            box-shadow: 0 4px 24px rgba(102, 126, 234, 0.5);
+        }
+
+        /* ---- City Marker ---- */
+        .city-marker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: #fff;
+            font-weight: 600;
+            font-size: 11px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.25);
+        }
+        .city-marker:hover {
+            transform: scale(1.12);
+        }
+
+        /* ---- Evolution Control Bar ---- */
+        .evolution-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 24px;
+            background: rgba(22, 33, 62, 0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            position: relative;
+        }
+        .evo-label {
+            font-size: 0.88em;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--purple), var(--violet));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .evo-status {
+            font-size: 0.75em;
+            padding: 2px 10px;
+            border-radius: 20px;
+            background: rgba(99, 110, 114, 0.3);
+            color: var(--muted);
+            border: 1px solid rgba(99, 110, 114, 0.3);
+            min-width: 52px;
+            text-align: center;
+        }
+        .evo-status.running {
+            background: rgba(0, 184, 148, 0.2);
+            color: var(--green);
+            border-color: rgba(0, 184, 148, 0.4);
+            animation: evo-pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes evo-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0.3); }
+            50% { box-shadow: 0 0 8px 2px rgba(0, 184, 148, 0.2); }
+        }
+        .evo-btn {
+            padding: 4px 12px;
+            font-size: 0.78em;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .evo-btn:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.4));
+            border-color: var(--purple);
+            transform: translateY(-1px);
+        }
+        .evo-btn:active {
+            transform: translateY(0);
+        }
+        .evo-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .evo-btn.auto {
+            background: linear-gradient(135deg, rgba(0, 184, 148, 0.2), rgba(0, 206, 201, 0.2));
+            border-color: rgba(0, 184, 148, 0.3);
+        }
+        .evo-btn.auto.active {
+            background: linear-gradient(135deg, rgba(0, 184, 148, 0.5), rgba(0, 206, 201, 0.5));
+            border-color: var(--green);
+            color: #fff;
+            box-shadow: 0 0 12px rgba(0, 184, 148, 0.3);
+        }
+        .evo-month {
+            font-size: 0.82em;
+            color: var(--cyan);
+            font-weight: 600;
+            margin-left: auto;
+        }
+
+        /* ---- Loading Overlay ---- */
+        .loading-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 2000;
+            background: rgba(15, 14, 23, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            transition: opacity 0.5s;
+        }
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--purple);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text {
+            font-size: 0.9em;
+            color: var(--text2);
+        }
+
+        /* ---- Connection Lines ---- */
+        .connection-line {
+            stroke: var(--purple);
+            stroke-opacity: 0.15;
+            stroke-width: 1;
+            fill: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div style="display:flex;align-items:center;gap:14px">
+        <h1>🌍 世界地图 - Agent 地理分布</h1>
+    </div>
+    <div class="header-nav">
+        <a href="/" class="nav-btn active">🌍 世界地图</a>
+        <a href="/dashboard" class="nav-btn">📊 仪表盘</a>
+        <a href="/console" class="nav-btn">🎮 控制台</a>
+        <a href="/demo" class="nav-btn">🎬 演示</a>
+        <a href="/reports" class="nav-btn">📊 报告</a>
+    </div>
+</div>
+
+<div class="evolution-bar">
+    <span class="evo-label">🧬 世界演化</span>
+    <span class="evo-status" id="evoStatus">已停止</span>
+    <button class="evo-btn" onclick="evolveMonths(1)">+1月</button>
+    <button class="evo-btn" onclick="evolveMonths(6)">+6月</button>
+    <button class="evo-btn" onclick="evolveMonths(12)">+1年</button>
+    <button class="evo-btn auto" id="evoAutoBtn" onclick="toggleAutoEvolve()">▶ 自动</button>
+    <span class="evo-month" id="evoMonth">第 0 月</span>
+</div>
+
+<div id="map"></div>
+
+<!-- Stats Overlay -->
+<div class="stats-overlay" id="statsOverlay">
+    <div class="stats-title">📊 全球 Agent 概览</div>
+    <div class="stats-row"><span class="stats-label">总人口</span><span class="stats-value" id="stat-total">--</span></div>
+    <div class="stats-row"><span class="stats-label">国家</span><span class="stats-value" id="stat-countries">--</span></div>
+    <div class="stats-row"><span class="stats-label">职业类型</span><span class="stats-value" id="stat-jobs">--</span></div>
+    <div class="stats-row"><span class="stats-label">平均年龄</span><span class="stats-value" id="stat-age">--</span></div>
+    <div class="stats-row"><span class="stats-label">平均收入</span><span class="stats-value" id="stat-income">--</span></div>
+</div>
+
+<!-- Legend Overlay -->
+<div class="legend-overlay" id="legendOverlay">
+    <div class="legend-title">👷 职业颜色</div>
+    <div id="legend-items"></div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在加载 Agent 数据...</div>
+</div>
+
+<script>
+// ============================================================
+// 国家坐标数据
+// ============================================================
+const COUNTRY_COORDS = {
+    // ── East Asia ──
+    'chinese':    {lat: 35.86, lng: 104.19, name: '中国',       flag: '🇨🇳', cities: [{name:'北京',lat:39.9,lng:116.4},{name:'上海',lat:31.2,lng:121.5},{name:'广州',lat:23.1,lng:113.3}]},
+    'japanese':   {lat: 36.20, lng: 138.25, name: '日本',       flag: '🇯🇵', cities: [{name:'东京',lat:35.7,lng:139.7},{name:'大阪',lat:34.7,lng:135.5}]},
+    'korean':     {lat: 35.90, lng: 127.77, name: '韩国',       flag: '🇰🇷', cities: [{name:'首尔',lat:37.6,lng:127.0}]},
+    'taiwanese':  {lat: 23.70, lng: 120.96, name: '台湾',       flag: '🇹🇼', cities: [{name:'台北',lat:25.0,lng:121.5}]},
+    'mongolian':  {lat: 46.86, lng: 103.85, name: '蒙古',       flag: '🇲🇳', cities: [{name:'乌兰巴托',lat:47.9,lng:106.9}]},
+    // ── Southeast Asia ──
+    'vietnamese': {lat: 14.06, lng: 108.28, name: '越南',       flag: '🇻🇳', cities: [{name:'河内',lat:21.0,lng:105.8}]},
+    'thai':       {lat: 15.87, lng: 100.99, name: '泰国',       flag: '🇹🇭', cities: [{name:'曼谷',lat:13.8,lng:100.5}]},
+    'filipino':   {lat: 12.88, lng: 121.77, name: '菲律宾',     flag: '🇵🇭', cities: [{name:'马尼拉',lat:14.6,lng:121.0}]},
+    'indonesian': {lat: -0.79, lng: 113.92, name: '印尼',       flag: '🇮🇩', cities: [{name:'雅加达',lat:-6.2,lng:106.8}]},
+    'malaysian':  {lat: 4.21,  lng: 101.98, name: '马来西亚',   flag: '🇲🇾', cities: [{name:'吉隆坡',lat:3.1,lng:101.7}]},
+    'singaporean':{lat: 1.35,  lng: 103.82, name: '新加坡',     flag: '🇸🇬', cities: []},
+    'burmese':    {lat: 21.91, lng: 95.96,  name: '缅甸',       flag: '🇲🇲', cities: [{name:'仰光',lat:16.9,lng:96.2}]},
+    'cambodian':  {lat: 12.57, lng: 104.99, name: '柬埔寨',     flag: '🇰🇭', cities: [{name:'金边',lat:11.6,lng:104.9}]},
+    'lao':        {lat: 19.86, lng: 102.50, name: '老挝',       flag: '🇱🇦', cities: [{name:'万象',lat:17.97,lng:102.63}]},
+    // ── South Asia ──
+    'indian':     {lat: 20.59, lng: 78.96,  name: '印度',       flag: '🇮🇳', cities: [{name:'孟买',lat:19.1,lng:72.9},{name:'新德里',lat:28.6,lng:77.2}]},
+    'pakistani':  {lat: 30.38, lng: 69.35,  name: '巴基斯坦',   flag: '🇵🇰', cities: [{name:'卡拉奇',lat:24.9,lng:67.1}]},
+    'bangladeshi':{lat: 23.68, lng: 90.36,  name: '孟加拉',     flag: '🇧🇩', cities: [{name:'达卡',lat:23.8,lng:90.4}]},
+    'sri_lankan': {lat: 7.87,  lng: 80.77,  name: '斯里兰卡',   flag: '🇱🇰', cities: [{name:'科伦坡',lat:6.9,lng:79.9}]},
+    'nepali':     {lat: 28.39, lng: 84.12,  name: '尼泊尔',     flag: '🇳🇵', cities: [{name:'加德满都',lat:27.7,lng:85.3}]},
+    'bhutanese':  {lat: 27.51, lng: 90.43,  name: '不丹',       flag: '🇧🇹', cities: []},
+    'maldivian':  {lat: 3.20,  lng: 73.22,  name: '马尔代夫',   flag: '🇲🇻', cities: []},
+    // ── Central Asia ──
+    'kazakh':     {lat: 48.02, lng: 66.92,  name: '哈萨克斯坦', flag: '🇰🇿', cities: [{name:'阿斯塔纳',lat:51.2,lng:71.4}]},
+    'uzbek':      {lat: 41.38, lng: 64.59,  name: '乌兹别克斯坦',flag:'🇺🇿', cities: [{name:'塔什干',lat:41.3,lng:69.3}]},
+    'kyrgyz':     {lat: 41.20, lng: 74.77,  name: '吉尔吉斯斯坦',flag:'🇰🇬', cities: []},
+    'tajik':      {lat: 38.86, lng: 71.28,  name: '塔吉克斯坦', flag: '🇹🇯', cities: []},
+    'turkmen':    {lat: 38.97, lng: 59.56,  name: '土库曼斯坦', flag: '🇹🇲', cities: []},
+    'afghan':     {lat: 33.94, lng: 67.71,  name: '阿富汗',     flag: '🇦🇫', cities: [{name:'喀布尔',lat:34.5,lng:69.2}]},
+    // ── East Europe ──
+    'russian':    {lat: 61.52, lng: 105.32, name: '俄罗斯',     flag: '🇷🇺', cities: [{name:'莫斯科',lat:55.8,lng:37.6}]},
+    'ukrainian':  {lat: 48.38, lng: 31.17,  name: '乌克兰',     flag: '🇺🇦', cities: [{name:'基辅',lat:50.4,lng:30.5}]},
+    'belarusian': {lat: 53.71, lng: 27.95,  name: '白俄罗斯',   flag: '🇧🇾', cities: [{name:'明斯克',lat:53.9,lng:27.6}]},
+    'polish':     {lat: 51.92, lng: 19.15,  name: '波兰',       flag: '🇵🇱', cities: [{name:'华沙',lat:52.2,lng:21.0}]},
+    'czech':      {lat: 49.82, lng: 15.47,  name: '捷克',       flag: '🇨🇿', cities: [{name:'布拉格',lat:50.1,lng:14.4}]},
+    'slovak':     {lat: 48.67, lng: 19.70,  name: '斯洛伐克',   flag: '🇸🇰', cities: []},
+    'hungarian':  {lat: 47.16, lng: 19.50,  name: '匈牙利',     flag: '🇭🇺', cities: [{name:'布达佩斯',lat:47.5,lng:19.0}]},
+    'romanian':   {lat: 45.94, lng: 24.97,  name: '罗马尼亚',   flag: '🇷🇴', cities: [{name:'布加勒斯特',lat:44.4,lng:26.1}]},
+    'bulgarian':  {lat: 42.73, lng: 25.49,  name: '保加利亚',   flag: '🇧🇬', cities: [{name:'索非亚',lat:42.7,lng:23.3}]},
+    'moldovan':   {lat: 47.41, lng: 28.37,  name: '摩尔多瓦',   flag: '🇲🇩', cities: []},
+    // ── Western Europe ──
+    'english':    {lat: 55.37, lng: -3.44,  name: '英国',       flag: '🇬🇧', cities: [{name:'伦敦',lat:51.5,lng:-0.1}]},
+    'german':     {lat: 51.16, lng: 10.45,  name: '德国',       flag: '🇩🇪', cities: [{name:'柏林',lat:52.5,lng:13.4}]},
+    'french':     {lat: 46.23, lng: 2.21,   name: '法国',       flag: '🇫🇷', cities: [{name:'巴黎',lat:48.9,lng:2.3}]},
+    'italian':    {lat: 41.87, lng: 12.57,  name: '意大利',     flag: '🇮🇹', cities: [{name:'罗马',lat:41.9,lng:12.5}]},
+    'spanish':    {lat: 40.46, lng: -3.75,  name: '西班牙',     flag: '🇪🇸', cities: [{name:'马德里',lat:40.4,lng:-3.7}]},
+    'portuguese': {lat: 39.40, lng: -8.22,  name: '葡萄牙',     flag: '🇵🇹', cities: [{name:'里斯本',lat:38.7,lng:-9.1}]},
+    'dutch':      {lat: 52.13, lng: 5.29,   name: '荷兰',       flag: '🇳🇱', cities: [{name:'阿姆斯特丹',lat:52.4,lng:4.9}]},
+    'belgian':    {lat: 50.50, lng: 4.47,   name: '比利时',     flag: '🇧🇪', cities: [{name:'布鲁塞尔',lat:50.8,lng:4.4}]},
+    'swiss':      {lat: 46.82, lng: 8.23,   name: '瑞士',       flag: '🇨🇭', cities: [{name:'苏黎世',lat:47.4,lng:8.5}]},
+    'austrian':   {lat: 47.52, lng: 14.55,  name: '奥地利',     flag: '🇦🇹', cities: [{name:'维也纳',lat:48.2,lng:16.4}]},
+    'irish':      {lat: 53.14, lng: -7.69,  name: '爱尔兰',     flag: '🇮🇪', cities: [{name:'都柏林',lat:53.3,lng:-6.3}]},
+    'danish':     {lat: 56.26, lng: 9.50,   name: '丹麦',       flag: '🇩🇰', cities: [{name:'哥本哈根',lat:55.7,lng:12.6}]},
+    'norwegian':  {lat: 60.47, lng: 8.47,   name: '挪威',       flag: '🇳🇴', cities: [{name:'奥斯陆',lat:59.9,lng:10.7}]},
+    'swedish':    {lat: 60.13, lng: 18.64,  name: '瑞典',       flag: '🇸🇪', cities: [{name:'斯德哥尔摩',lat:59.3,lng:18.1}]},
+    'finnish':    {lat: 61.92, lng: 25.75,  name: '芬兰',       flag: '🇫🇮', cities: [{name:'赫尔辛基',lat:60.2,lng:24.9}]},
+    'icelandic':  {lat: 64.96, lng: -19.02, name: '冰岛',       flag: '🇮🇸', cities: []},
+    'estonian':   {lat: 58.60, lng: 25.01,  name: '爱沙尼亚',   flag: '🇪🇪', cities: []},
+    'latvian':    {lat: 56.88, lng: 24.60,  name: '拉脱维亚',   flag: '🇱🇻', cities: []},
+    'lithuanian': {lat: 55.17, lng: 23.88,  name: '立陶宛',     flag: '🇱🇹', cities: []},
+    'scottish':   {lat: 56.49, lng: -4.20,  name: '苏格兰',     flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', cities: []},
+    'welsh':      {lat: 52.13, lng: -3.78,  name: '威尔士',     flag: '🏴󠁧󠁢󠁷󠁬󠁳󠁿', cities: []},
+    'luxembourgish':{lat:49.82,lng: 6.13,   name: '卢森堡',     flag: '🇱🇺', cities: []},
+    // ── Balkans ──
+    'serbian':    {lat: 44.02, lng: 21.01,  name: '塞尔维亚',   flag: '🇷🇸', cities: [{name:'贝尔格莱德',lat:44.8,lng:20.5}]},
+    'croatian':   {lat: 45.10, lng: 15.20,  name: '克罗地亚',   flag: '🇭🇷', cities: []},
+    'bosnian':    {lat: 43.92, lng: 17.68,  name: '波黑',       flag: '🇧🇦', cities: []},
+    'slovenian':  {lat: 46.15, lng: 14.99,  name: '斯洛文尼亚', flag: '🇸🇮', cities: []},
+    'macedonian': {lat: 41.51, lng: 21.75,  name: '北马其顿',   flag: '🇲🇰', cities: []},
+    'albanian':   {lat: 41.15, lng: 20.17,  name: '阿尔巴尼亚', flag: '🇦🇱', cities: []},
+    'greek':      {lat: 39.07, lng: 21.82,  name: '希腊',       flag: '🇬🇷', cities: [{name:'雅典',lat:37.98,lng:23.73}]},
+    'turkish':    {lat: 38.96, lng: 35.24,  name: '土耳其',     flag: '🇹🇷', cities: [{name:'伊斯坦布尔',lat:41.0,lng:29.0}]},
+    'cypriot':    {lat: 35.13, lng: 33.43,  name: '塞浦路斯',   flag: '🇨🇾', cities: []},
+    // ── Middle East ──
+    'arabic':     {lat: 23.88, lng: 45.08,  name: '沙特',       flag: '🇸🇦', cities: [{name:'利雅得',lat:24.7,lng:46.7}]},
+    'iranian':    {lat: 32.43, lng: 53.69,  name: '伊朗',       flag: '🇮🇷', cities: [{name:'德黑兰',lat:35.7,lng:51.4}]},
+    'iraqi':      {lat: 33.22, lng: 43.68,  name: '伊拉克',     flag: '🇮🇶', cities: [{name:'巴格达',lat:33.3,lng:44.4}]},
+    'syrian':     {lat: 34.80, lng: 38.99,  name: '叙利亚',     flag: '🇸🇾', cities: []},
+    'jordanian':  {lat: 30.59, lng: 36.24,  name: '约旦',       flag: '🇯🇴', cities: []},
+    'lebanese':   {lat: 33.85, lng: 35.86,  name: '黎巴嫩',     flag: '🇱🇧', cities: [{name:'贝鲁特',lat:33.9,lng:35.5}]},
+    'israeli':    {lat: 31.05, lng: 34.85,  name: '以色列',     flag: '🇮🇱', cities: [{name:'特拉维夫',lat:32.1,lng:34.8}]},
+    'saudi':      {lat: 25.00, lng: 45.00,  name: '沙特阿拉伯', flag: '🇸🇦', cities: [{name:'利雅得',lat:24.7,lng:46.7}]},
+    'emirati':    {lat: 23.42, lng: 53.85,  name: '阿联酋',     flag: '🇦🇪', cities: [{name:'迪拜',lat:25.2,lng:55.3}]},
+    'kuwaiti':    {lat: 29.31, lng: 47.48,  name: '科威特',     flag: '🇰🇼', cities: []},
+    'qatari':     {lat: 25.35, lng: 51.18,  name: '卡塔尔',     flag: '🇶🇦', cities: []},
+    'bahraini':   {lat: 26.07, lng: 50.55,  name: '巴林',       flag: '🇧🇭', cities: []},
+    'omani':      {lat: 21.47, lng: 55.98,  name: '阿曼',       flag: '🇴🇲', cities: []},
+    'yemeni':     {lat: 15.55, lng: 48.52,  name: '也门',       flag: '🇾🇪', cities: []},
+    // ── Africa ──
+    'egyptian':   {lat: 26.82, lng: 30.80,  name: '埃及',       flag: '🇪🇬', cities: [{name:'开罗',lat:30.0,lng:31.2}]},
+    'moroccan':   {lat: 31.79, lng: -7.09,  name: '摩洛哥',     flag: '🇲🇦', cities: [{name:'卡萨布兰卡',lat:33.6,lng:-7.6}]},
+    'algerian':   {lat: 28.03, lng: 1.66,   name: '阿尔及利亚', flag: '🇩🇿', cities: []},
+    'tunisian':   {lat: 33.89, lng: 9.54,   name: '突尼斯',     flag: '🇹🇳', cities: []},
+    'libyan':     {lat: 26.34, lng: 17.23,  name: '利比亚',     flag: '🇱🇾', cities: []},
+    'nigerian':   {lat: 9.08,  lng: 8.68,   name: '尼日利亚',   flag: '🇳🇬', cities: [{name:'拉各斯',lat:6.5,lng:3.4}]},
+    'south_african':{lat:-30.56,lng:22.94,  name: '南非',       flag: '🇿🇦', cities: [{name:'约翰内斯堡',lat:-26.2,lng:28.0}]},
+    'kenyan':     {lat: -0.02, lng: 37.91,  name: '肯尼亚',     flag: '🇰🇪', cities: [{name:'内罗毕',lat:-1.3,lng:36.8}]},
+    'ghanaian':   {lat: 7.95,  lng: -1.02,  name: '加纳',       flag: '🇬🇭', cities: [{name:'阿克拉',lat:5.6,lng:-0.2}]},
+    'ethiopian':  {lat: 9.15,  lng: 40.49,  name: '埃塞俄比亚', flag: '🇪🇹', cities: [{name:'亚的斯亚贝巴',lat:9.0,lng:38.7}]},
+    'tanzanian':  {lat: -6.37, lng: 34.89,  name: '坦桑尼亚',   flag: '🇹🇿', cities: []},
+    'ugandan':    {lat: 1.37,  lng: 32.29,  name: '乌干达',     flag: '🇺🇬', cities: []},
+    'congolese':  {lat: -4.04, lng: 21.76,  name: '刚果',       flag: '🇨🇩', cities: [{name:'金沙萨',lat:-4.3,lng:15.3}]},
+    'senegalese': {lat: 14.50, lng: -14.45, name: '塞内加尔',   flag: '🇸🇳', cities: [{name:'达喀尔',lat:14.7,lng:-17.5}]},
+    'ivorian':    {lat: 7.54,  lng: -5.55,  name: '科特迪瓦',   flag: '🇨🇮', cities: []},
+    'cameroonian':{lat: 7.37,  lng: 12.35,  name: '喀麦隆',     flag: '🇨🇲', cities: []},
+    'rwandan':    {lat: -1.94, lng: 29.87,  name: '卢旺达',     flag: '🇷🇼', cities: []},
+    // ── Americas ──
+    'american':   {lat: 37.09, lng: -95.71, name: '美国',       flag: '🇺🇸', cities: [{name:'纽约',lat:40.7,lng:-74.0},{name:'洛杉矶',lat:34.1,lng:-118.2},{name:'芝加哥',lat:41.9,lng:-87.6}]},
+    'canadian':   {lat: 56.13, lng: -106.35,name: '加拿大',     flag: '🇨🇦', cities: [{name:'多伦多',lat:43.7,lng:-79.4},{name:'温哥华',lat:49.3,lng:-123.1}]},
+    'mexican':    {lat: 23.63, lng: -102.55,name: '墨西哥',     flag: '🇲🇽', cities: [{name:'墨西哥城',lat:19.4,lng:-99.1}]},
+    'brazilian':  {lat: -14.24,lng: -51.93, name: '巴西',       flag: '🇧🇷', cities: [{name:'圣保罗',lat:-23.6,lng:-46.6},{name:'里约',lat:-22.9,lng:-43.2}]},
+    'argentine':  {lat: -38.42,lng: -63.62, name: '阿根廷',     flag: '🇦🇷', cities: [{name:'布宜诺斯艾利斯',lat:-34.6,lng:-58.4}]},
+    'colombian':  {lat: 4.57,  lng: -74.30, name: '哥伦比亚',   flag: '🇨🇴', cities: [{name:'波哥大',lat:4.7,lng:-74.1}]},
+    'chilean':    {lat: -35.68,lng: -71.54, name: '智利',       flag: '🇨🇱', cities: [{name:'圣地亚哥',lat:-33.4,lng:-70.7}]},
+    'peruvian':   {lat: -9.19, lng: -75.02, name: '秘鲁',       flag: '🇵🇪', cities: [{name:'利马',lat:-12.0,lng:-77.0}]},
+    'venezuelan': {lat: 6.42,  lng: -66.59, name: '委内瑞拉',   flag: '🇻🇪', cities: []},
+    'cuban':      {lat: 21.52, lng: -77.78, name: '古巴',       flag: '🇨🇺', cities: [{name:'哈瓦那',lat:23.1,lng:-82.4}]},
+    'jamaican':   {lat: 18.11, lng: -77.30, name: '牙买加',     flag: '🇯🇲', cities: []},
+    'haitian':    {lat: 18.97, lng: -72.29, name: '海地',       flag: '🇭🇹', cities: []},
+    'dominican':  {lat: 18.74, lng: -70.16, name: '多米尼加',   flag: '🇩🇴', cities: []},
+    'puerto_rican':{lat:18.22, lng: -66.59, name: '波多黎各',   flag: '🇵🇷', cities: []},
+    'costa_rican':{lat: 9.75,  lng: -83.75, name: '哥斯达黎加', flag: '🇨🇷', cities: []},
+    'guatemalan': {lat: 15.78, lng: -90.23, name: '危地马拉',   flag: '🇬🇹', cities: []},
+    'honduran':   {lat: 15.20, lng: -86.24, name: '洪都拉斯',   flag: '🇭🇳', cities: []},
+    'salvadoran': {lat: 13.79, lng: -88.90, name: '萨尔瓦多',   flag: '🇸🇻', cities: []},
+    'nicaraguan': {lat: 12.87, lng: -85.21, name: '尼加拉瓜',   flag: '🇳🇮', cities: []},
+    'panamanian': {lat: 8.54,  lng: -80.78, name: '巴拿马',     flag: '🇵🇦', cities: []},
+    // ── Oceania ──
+    'australian': {lat: -25.27,lng: 133.78, name: '澳大利亚',   flag: '🇦🇺', cities: [{name:'悉尼',lat:-33.9,lng:151.2},{name:'墨尔本',lat:-37.8,lng:145.0}]},
+    'new_zealander':{lat:-40.90,lng:174.89, name: '新西兰',     flag: '🇳🇿', cities: [{name:'奥克兰',lat:-36.8,lng:174.8}]},
+    'fijian':     {lat: -17.71,lng: 178.07, name: '斐济',       flag: '🇫🇯', cities: []},
+    'samoan':     {lat: -13.76,lng: -172.10,name: '萨摩亚',     flag: '🇼🇸', cities: []},
+    'tongan':     {lat: -21.18,lng: -175.20,name: '汤加',       flag: '🇹🇴', cities: []},
+    'papua_new_guinean':{lat:-6.31,lng:143.96,name:'巴布亚新几内亚',flag:'🇵🇬',cities:[]},
+    // ── Caucasus & Others ──
+    'georgian':   {lat: 42.32, lng: 43.36,  name: '格鲁吉亚',   flag: '🇬🇪', cities: [{name:'第比利斯',lat:41.7,lng:44.8}]},
+    'armenian':   {lat: 40.07, lng: 45.04,  name: '亚美尼亚',   flag: '🇦🇲', cities: [{name:'埃里温',lat:40.2,lng:44.5}]},
+    'azerbaijani':{lat: 40.14, lng: 47.58,  name: '阿塞拜疆',   flag: '🇦🇿', cities: [{name:'巴库',lat:40.4,lng:49.9}]},
+    'maltese':    {lat: 35.94, lng: 14.38,  name: '马耳他',     flag: '🇲🇹', cities: []},
+};
+
+// ============================================================
+// 职业颜色映射
+// ============================================================
+const OCCUPATION_COLORS = {
+    'farmer':       '#00b894',
+    'worker':       '#0984e3',
+    'merchant':     '#fdcb6e',
+    'teacher':      '#6c5ce7',
+    'doctor':       '#e84393',
+    'soldier':      '#d63031',
+    'artist':       '#e17055',
+    'scholar':      '#00cec9',
+    'official':     '#667eea',
+    'craftsman':    '#a29bfe',
+    'engineer':     '#74b9ff',
+    'scientist':    '#55efc4',
+    'priest':       '#ffeaa7',
+    'noble':        '#dfe6e9',
+    'unemployed':   '#636e72',
+    'student':      '#81ecec',
+    'retired':      '#b2bec3',
+};
+
+const OCCUPATION_NAMES = {
+    'farmer':     '农民',
+    'worker':     '工人',
+    'merchant':   '商人',
+    'teacher':    '教师',
+    'doctor':     '医生',
+    'soldier':    '军人',
+    'artist':     '艺术家',
+    'scholar':    '学者',
+    'official':   '官员',
+    'craftsman':  '工匠',
+    'engineer':   '工程师',
+    'scientist':  '科学家',
+    'priest':     '神职',
+    'noble':      '贵族',
+    'unemployed': '失业',
+    'student':    '学生',
+    'retired':    '退休',
+};
+
+// Country-specific gradient colors for bubbles
+// Auto-generate colors by region for 133 countries
+const REGION_COLORS = {
+    // East Asia — warm reds/pinks
+    east_asia:    ['#dc2626','#ec4899','#3b82f6','#f43f5e','#e11d48'],
+    // Southeast Asia — teals/cyans
+    southeast_asia:['#06b6d4','#0891b2','#14b8a6','#0d9488','#2dd4bf','#0e7490','#0f766e','#115e59'],
+    // South Asia — oranges/ambers
+    south_asia:   ['#f97316','#ea580c','#d97706','#b45309','#92400e','#c2410c','#a16207'],
+    // Central Asia — yellows/limes
+    central_asia: ['#84cc16','#65a30d','#4d7c0f','#a3e635','#bef264','#ca8a04'],
+    // East Europe — purples/violets
+    east_europe:  ['#8b5cf6','#7c3aed','#6d28d9','#a78bfa','#c084fc','#9333ea','#7e22ce','#6b21a8','#581c87','#4c1d95'],
+    // Western Europe — blues/indigos
+    west_europe:  ['#6366f1','#4f46e5','#4338ca','#818cf8','#a5b4fc','#3730a3','#312e81','#1e40af','#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#1e3a8a','#1e40af','#2563eb','#3b82f6'],
+    // Balkans — slate/zinc
+    balkans:      ['#64748b','#475569','#334155','#94a3b8','#78716c','#57534e','#a8a29e','#71717a','#52525b'],
+    // Middle East — emeralds/greens
+    middle_east:  ['#22c55e','#16a34a','#15803d','#166534','#4ade80','#86efac','#34d399','#10b981','#059669','#047857','#065f46','#064e3b','#a3e635','#84cc16'],
+    // Africa — warm earth tones
+    africa:       ['#b45309','#92400e','#78350f','#a16207','#ca8a04','#eab308','#d97706','#c2410c','#ea580c','#f59e0b','#fbbf24','#fcd34d','#f97316','#fb923c','#fdba74'],
+    // Americas — vibrant mix
+    americas:     ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#06b6d4','#a855f7','#f43f5e','#d946ef','#e879f9','#c084fc','#a78bfa','#818cf8'],
+    // Oceania — ocean blues
+    oceania:      ['#0ea5e9','#0284c7','#0369a1','#38bdf8','#7dd3fc','#bae6fd'],
+    // Caucasus & Others — rose/fuchsia
+    others:       ['#e11d48','#be123c','#9f1239','#f472b6','#ec4899'],
+};
+
+const REGION_MAP = {
+    chinese:'east_asia', japanese:'east_asia', korean:'east_asia', taiwanese:'east_asia', mongolian:'east_asia',
+    vietnamese:'southeast_asia', thai:'southeast_asia', filipino:'southeast_asia', indonesian:'southeast_asia',
+    malaysian:'southeast_asia', singaporean:'southeast_asia', burmese:'southeast_asia', cambodian:'southeast_asia', lao:'southeast_asia',
+    indian:'south_asia', pakistani:'south_asia', bangladeshi:'south_asia', sri_lankan:'south_asia',
+    nepali:'south_asia', bhutanese:'south_asia', maldivian:'south_asia',
+    kazakh:'central_asia', uzbek:'central_asia', kyrgyz:'central_asia', tajik:'central_asia', turkmen:'central_asia', afghan:'central_asia',
+    russian:'east_europe', ukrainian:'east_europe', belarusian:'east_europe', polish:'east_europe',
+    czech:'east_europe', slovak:'east_europe', hungarian:'east_europe', romanian:'east_europe', bulgarian:'east_europe', moldovan:'east_europe',
+    english:'west_europe', german:'west_europe', french:'west_europe', italian:'west_europe', spanish:'west_europe',
+    portuguese:'west_europe', dutch:'west_europe', belgian:'west_europe', swiss:'west_europe', austrian:'west_europe',
+    irish:'west_europe', danish:'west_europe', norwegian:'west_europe', swedish:'west_europe', finnish:'west_europe',
+    icelandic:'west_europe', estonian:'west_europe', latvian:'west_europe', lithuanian:'west_europe',
+    scottish:'west_europe', welsh:'west_europe', luxembourgish:'west_europe',
+    serbian:'balkans', croatian:'balkans', bosnian:'balkans', slovenian:'balkans', macedonian:'balkans',
+    albanian:'balkans', greek:'balkans', turkish:'balkans', cypriot:'balkans',
+    arabic:'middle_east', iranian:'middle_east', iraqi:'middle_east', syrian:'middle_east', jordanian:'middle_east',
+    lebanese:'middle_east', israeli:'middle_east', saudi:'middle_east', emirati:'middle_east',
+    kuwaiti:'middle_east', qatari:'middle_east', bahraini:'middle_east', omani:'middle_east', yemeni:'middle_east',
+    egyptian:'africa', moroccan:'africa', algerian:'africa', tunisian:'africa', libyan:'africa',
+    nigerian:'africa', south_african:'africa', kenyan:'africa', ghanaian:'africa', ethiopian:'africa',
+    tanzanian:'africa', ugandan:'africa', congolese:'africa', senegalese:'africa', ivorian:'africa', cameroonian:'africa', rwandan:'africa',
+    american:'americas', canadian:'americas', mexican:'americas', brazilian:'americas', argentine:'americas',
+    colombian:'americas', chilean:'americas', peruvian:'americas', venezuelan:'americas', cuban:'americas',
+    jamaican:'americas', haitian:'americas', dominican:'americas', puerto_rican:'americas',
+    costa_rican:'americas', guatemalan:'americas', honduran:'americas', salvadoran:'americas', nicaraguan:'americas', panamanian:'americas',
+    australian:'oceania', new_zealander:'oceania', fijian:'oceania', samoan:'oceania', tongan:'oceania', papua_new_guinean:'oceania',
+    georgian:'others', armenian:'others', azerbaijani:'others', maltese:'others',
+};
+
+// Build COUNTRY_COLORS dynamically
+const COUNTRY_COLORS = {};
+const _regionCounters = {};
+for (const [nat, region] of Object.entries(REGION_MAP)) {
+    if (!_regionCounters[region]) _regionCounters[region] = 0;
+    const palette = REGION_COLORS[region] || REGION_COLORS.others;
+    const c = palette[_regionCounters[region] % palette.length];
+    COUNTRY_COLORS[nat] = { bg: c + 'b3', border: c };  // b3 = 70% opacity
+    _regionCounters[region]++;
+}
+
+// ============================================================
+// Global state
+// ============================================================
+let map;
+let allAgents = [];
+let countryGroups = {};   // nationality -> [agents]
+let countryMarkers = {};  // nationality -> L.marker (bubble)
+let cityMarkers = [];     // L.marker[]
+let connectionLines = []; // L.polyline[]
+
+// ============================================================
+// Initialize Map
+// ============================================================
+function initMap() {
+    map = L.map('map', {
+        center: [30, 50],
+        zoom: 3,
+        minZoom: 2,
+        maxZoom: 12,
+        zoomControl: true,
+        attributionControl: true,
+    });
+
+    // Dark tile layer
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 19,
+    }).addTo(map);
+
+    // Load data
+    loadAgents();
+
+    // Zoom-level driven visibility
+    map.on('zoomend', onZoomChange);
+}
+
+// ============================================================
+// Load Agent Data
+// ============================================================
+async function loadAgents() {
+    try {
+        const resp = await fetch('/api/agents/display?limit=10000');
+        const data = await resp.json();
+
+        if (data.data && data.data.agents) {
+            allAgents = data.data.agents;
+        } else if (data.agents) {
+            allAgents = data.agents;
+        } else if (Array.isArray(data)) {
+            allAgents = data;
+        } else {
+            allAgents = [];
+        }
+
+        processAgents();
+        renderMap();
+        updateStats();
+        renderLegend();
+
+        // Hide loading
+        document.getElementById('loadingOverlay').classList.add('hidden');
+    } catch (err) {
+        console.error('Failed to load agents:', err);
+        document.querySelector('.loading-text').textContent = '❌ 加载失败: ' + err.message;
+    }
+}
+
+// ============================================================
+// Process & Group Agents
+// ============================================================
+// CN nationality to key mapping
+const NAT_KEY_MAP = {'中国':'chinese','日本':'japanese','韩国':'korean','英国':'english','德国':'german','法国':'french','西班牙':'spanish','沙特':'arabic','印度':'indian','俄罗斯':'russian'};
+
+function processAgents() {
+    countryGroups = {};
+    allAgents.forEach(agent => {
+        let nat = (agent.nationality || agent.culture || 'unknown');
+        // Map Chinese nationality names to keys
+        nat = NAT_KEY_MAP[nat] || nat.toLowerCase();
+        if (!countryGroups[nat]) countryGroups[nat] = [];
+        countryGroups[nat].push(agent);
+    });
+}
+
+// ============================================================
+// Render Map
+// ============================================================
+function renderMap() {
+    // Clear existing
+    Object.values(countryMarkers).forEach(m => map.removeLayer(m));
+    cityMarkers.forEach(m => map.removeLayer(m));
+    connectionLines.forEach(l => map.removeLayer(l));
+    countryMarkers = {};
+    cityMarkers = [];
+    connectionLines = [];
+
+    // Draw connection lines between countries (subtle)
+    drawConnectionLines();
+
+    // Draw country bubbles
+    for (const [nat, coords] of Object.entries(COUNTRY_COORDS)) {
+        const agents = countryGroups[nat] || [];
+        const count = agents.length;
+        if (count === 0) continue;
+
+        // Bubble size: scale by agent count
+        const minSize = 36;
+        const maxSize = 80;
+        const maxCount = Math.max(...Object.values(countryGroups).map(a => a.length), 1);
+        const size = minSize + (maxSize - minSize) * Math.sqrt(count / maxCount);
+
+        const color = COUNTRY_COLORS[nat] || { bg: 'rgba(102,126,234,0.7)', border: '#667eea' };
+
+        const icon = L.divIcon({
+            className: '',
+            html: `<div class="bubble-marker" style="
+                width:${size}px;
+                height:${size}px;
+                background: radial-gradient(circle at 35% 35%, ${color.bg}, rgba(0,0,0,0.3));
+                border-color: ${color.border};
+            ">${count}</div>`,
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2],
+        });
+
+        const marker = L.marker([coords.lat, coords.lng], { icon }).addTo(map);
+        marker.on('click', () => showCountryPopup(nat, coords, agents, marker));
+
+        // Tooltip on hover
+        marker.bindTooltip(`${coords.flag} ${coords.name} · ${count} Agent`, {
+            direction: 'top',
+            className: 'dark-tooltip',
+            offset: [0, -size / 2],
+        });
+
+        countryMarkers[nat] = marker;
+
+        // City markers (visible at higher zoom)
+        coords.cities.forEach(city => {
+            // Distribute agents to cities (round-robin)
+            const cityAgents = agents.filter((_, i) => i % coords.cities.length === coords.cities.indexOf(city));
+            const cityCount = cityAgents.length;
+            if (cityCount === 0) return;
+
+            const citySize = Math.max(22, Math.min(40, 22 + cityCount / 10));
+            const cityIcon = L.divIcon({
+                className: '',
+                html: `<div class="city-marker" style="
+                    width:${citySize}px;
+                    height:${citySize}px;
+                    background: ${color.bg};
+                    border-color: ${color.border};
+                    font-size:${citySize < 28 ? 9 : 11}px;
+                ">${cityCount}</div>`,
+                iconSize: [citySize, citySize],
+                iconAnchor: [citySize / 2, citySize / 2],
+            });
+
+            const cm = L.marker([city.lat, city.lng], { icon: cityIcon });
+            cm.bindTooltip(`${city.name} · ${cityCount} Agent`, {
+                direction: 'top',
+                className: 'dark-tooltip',
+                offset: [0, -citySize / 2],
+            });
+            cm.on('click', () => showCityPopup(nat, city, cityAgents, cm));
+
+            // Start hidden; show on zoom
+            cityMarkers.push({ marker: cm, nat });
+        });
+    }
+
+    onZoomChange(); // set initial visibility
+}
+
+// ============================================================
+// Connection Lines — only within same region, and only for top-populated countries
+// ============================================================
+function drawConnectionLines() {
+    const nats = Object.keys(countryGroups).filter(n => COUNTRY_COORDS[n]);
+
+    // Group by region
+    const regionNats = {};
+    nats.forEach(n => {
+        const r = REGION_MAP[n] || 'others';
+        if (!regionNats[r]) regionNats[r] = [];
+        regionNats[r].push(n);
+    });
+
+    for (const [region, members] of Object.entries(regionNats)) {
+        // Only draw lines if region has 2+ countries with agents
+        if (members.length < 2) continue;
+
+        // Sort by agent count, only connect top 5 per region to avoid clutter
+        members.sort((a, b) => (countryGroups[b]?.length || 0) - (countryGroups[a]?.length || 0));
+        const top = members.slice(0, 5);
+
+        const regionColor = REGION_COLORS[region]?.[0] || '#667eea';
+
+        for (let i = 0; i < top.length; i++) {
+            for (let j = i + 1; j < top.length; j++) {
+                const a = COUNTRY_COORDS[top[i]];
+                const b = COUNTRY_COORDS[top[j]];
+                if (!a || !b) continue;
+                const line = L.polyline([[a.lat, a.lng], [b.lat, b.lng]], {
+                    color: regionColor,
+                    weight: 1,
+                    opacity: 0.18,
+                    dashArray: '4 8',
+                }).addTo(map);
+                connectionLines.push(line);
+            }
+        }
+    }
+}
+
+// ============================================================
+// Zoom-based Visibility
+// ============================================================
+function onZoomChange() {
+    const zoom = map.getZoom();
+    const showCities = zoom >= 5;
+
+    cityMarkers.forEach(({ marker }) => {
+        if (showCities) {
+            if (!map.hasLayer(marker)) marker.addTo(map);
+        } else {
+            if (map.hasLayer(marker)) map.removeLayer(marker);
+        }
+    });
+
+    // Hide country bubbles at high zoom to avoid clutter
+    const showBubbles = zoom < 8;
+    Object.values(countryMarkers).forEach(m => {
+        if (showBubbles) {
+            if (!map.hasLayer(m)) m.addTo(map);
+        } else {
+            if (map.hasLayer(m)) map.removeLayer(m);
+        }
+    });
+}
+
+// ============================================================
+// Country Popup
+// ============================================================
+function showCountryPopup(nat, coords, agents, marker) {
+    const color = COUNTRY_COLORS[nat] || { border: '#667eea' };
+
+    // Occupation breakdown
+    const occCounts = {};
+    let totalAge = 0, totalIncome = 0;
+    agents.forEach(a => {
+        const occ = a.occupation || a.job || 'unknown';
+        occCounts[occ] = (occCounts[occ] || 0) + 1;
+        totalAge += a.age || 0;
+        totalIncome += a.income || a.monthly_income || 0;
+    });
+    const avgAge = agents.length ? (totalAge / agents.length).toFixed(1) : '--';
+    const avgIncome = agents.length ? Math.round(totalIncome / agents.length).toLocaleString() : '--';
+
+    // Sort occupations by count
+    const sortedOcc = Object.entries(occCounts).sort((a, b) => b[1] - a[1]);
+
+    // Build agent list (first 50)
+    const displayAgents = agents.slice(0, 50);
+
+    let html = `
+        <div class="country-popup">
+            <h3>${coords.flag} ${coords.name} <span style="font-size:0.75em;color:var(--muted)">${agents.length} Agent</span></h3>
+            <div class="pop-stats">
+                <span class="pop-stat">平均年龄 <b>${avgAge}</b></span>
+                <span class="pop-stat">平均收入 <b>$${avgIncome}</b></span>
+                <span class="pop-stat">城市 <b>${coords.cities.length}</b></span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
+                ${sortedOcc.map(([occ, cnt]) => {
+                    const c = OCCUPATION_COLORS[occ] || '#667eea';
+                    const n = OCCUPATION_NAMES[occ] || occ;
+                    return `<span style="font-size:0.7em;padding:2px 6px;border-radius:4px;background:${c}22;color:${c};border:1px solid ${c}44">${n} ${cnt}</span>`;
+                }).join('')}
+            </div>
+            <div class="agent-list-scroll">
+                ${displayAgents.map(a => {
+                    const occ = a.occupation || a.job || 'unknown';
+                    const c = OCCUPATION_COLORS[occ] || '#667eea';
+                    const name = a.name || a.display_name || `Agent #${a.id}`;
+                    const age = a.age || '--';
+                    const occName = OCCUPATION_NAMES[occ] || occ;
+                    return `<div class="agent-item">
+                        <span class="agent-occ-dot" style="background:${c}"></span>
+                        <span class="agent-name">${name}</span>
+                        <span class="agent-info">${occName} · ${age}岁</span>
+                    </div>`;
+                }).join('')}
+                ${agents.length > 50 ? `<div style="text-align:center;font-size:0.72em;color:var(--muted);padding:6px 0">... 还有 ${agents.length - 50} 人</div>` : ''}
+            </div>
+        </div>
+    `;
+
+    marker.bindPopup(html, {
+        maxWidth: 380,
+        maxHeight: 420,
+        className: 'dark-popup',
+    }).openPopup();
+}
+
+// ============================================================
+// City Popup
+// ============================================================
+function showCityPopup(nat, city, agents, marker) {
+    const coords = COUNTRY_COORDS[nat];
+    const color = COUNTRY_COLORS[nat] || { border: '#667eea' };
+
+    const displayAgents = agents.slice(0, 30);
+
+    let html = `
+        <div class="country-popup">
+            <h3>${coords.flag} ${city.name} <span style="font-size:0.75em;color:var(--muted)">${agents.length} Agent</span></h3>
+            <div class="agent-list-scroll">
+                ${displayAgents.map(a => {
+                    const occ = a.occupation || a.job || 'unknown';
+                    const c = OCCUPATION_COLORS[occ] || '#667eea';
+                    const name = a.name || a.display_name || `Agent #${a.id}`;
+                    const occName = OCCUPATION_NAMES[occ] || occ;
+                    return `<div class="agent-item">
+                        <span class="agent-occ-dot" style="background:${c}"></span>
+                        <span class="agent-name">${name}</span>
+                        <span class="agent-info">${occName} · ${a.age || '--'}岁</span>
+                    </div>`;
+                }).join('')}
+                ${agents.length > 30 ? `<div style="text-align:center;font-size:0.72em;color:var(--muted);padding:6px 0">... 还有 ${agents.length - 30} 人</div>` : ''}
+            </div>
+        </div>
+    `;
+
+    marker.bindPopup(html, {
+        maxWidth: 340,
+        maxHeight: 380,
+        className: 'dark-popup',
+    }).openPopup();
+}
+
+// ============================================================
+// Update Stats Overlay
+// ============================================================
+function updateStats() {
+    const total = allAgents.length;
+    const countries = Object.keys(countryGroups).filter(n => COUNTRY_COORDS[n]).length;
+
+    const occupations = new Set();
+    let totalAge = 0, totalIncome = 0, ageCount = 0, incCount = 0;
+    allAgents.forEach(a => {
+        occupations.add(a.occupation || a.job || 'unknown');
+        if (a.age) { totalAge += a.age; ageCount++; }
+        const inc = a.income || a.monthly_income || 0;
+        if (inc) { totalIncome += inc; incCount++; }
+    });
+
+    document.getElementById('stat-total').textContent = total.toLocaleString();
+    document.getElementById('stat-countries').textContent = countries;
+    document.getElementById('stat-jobs').textContent = occupations.size;
+    document.getElementById('stat-age').textContent = ageCount ? (totalAge / ageCount).toFixed(1) : '--';
+    document.getElementById('stat-income').textContent = incCount ? ('$' + Math.round(totalIncome / incCount).toLocaleString()) : '--';
+}
+
+// ============================================================
+// Render Legend
+// ============================================================
+function renderLegend() {
+    const occSet = new Set();
+    allAgents.forEach(a => occSet.add(a.occupation || a.job || 'unknown'));
+
+    const container = document.getElementById('legend-items');
+    const sorted = [...occSet].sort();
+
+    container.innerHTML = sorted.map(occ => {
+        const c = OCCUPATION_COLORS[occ] || '#667eea';
+        const n = OCCUPATION_NAMES[occ] || occ;
+        return `<div class="legend-item"><span class="legend-dot" style="background:${c}"></span>${n}</div>`;
+    }).join('');
+}
+
+// ============================================================
+// Evolution Control
+// ============================================================
+let evoCurrentMonth = 0;
+let evoAutoTimer = null;
+let evoIsRunning = false;
+
+async function evolveMonths(n) {
+    const statusEl = document.getElementById('evoStatus');
+    const monthEl = document.getElementById('evoMonth');
+    const btns = document.querySelectorAll('.evo-btn:not(.auto)');
+
+    // Disable buttons during request
+    btns.forEach(b => b.disabled = true);
+    statusEl.textContent = '演化中...';
+    statusEl.classList.add('running');
+
+    try {
+        const resp = await fetch('/api/simulate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ months: n })
+        });
+        const data = await resp.json();
+
+        // Update month counter
+        if (data.data && data.data.months_simulated !== undefined) {
+            evoCurrentMonth = data.data.months_simulated;
+        } else if (data.current_month !== undefined) {
+            evoCurrentMonth = data.current_month;
+        } else {
+            evoCurrentMonth += n;
+        }
+        monthEl.textContent = `第 ${evoCurrentMonth} 月`;
+
+        // Refresh map data (async, don't block evolution)
+        loadAgents().catch(e => console.warn('Refresh agents:', e));
+
+        if (!evoAutoTimer) {
+            statusEl.textContent = '已完成';
+            statusEl.classList.remove('running');
+            setTimeout(() => {
+                if (!evoAutoTimer) {
+                    statusEl.textContent = '已停止';
+                }
+            }, 2000);
+        }
+    } catch (err) {
+        console.error('Evolution failed:', err);
+        statusEl.textContent = '❌ 失败';
+        statusEl.classList.remove('running');
+        setTimeout(() => {
+            if (!evoAutoTimer) {
+                statusEl.textContent = '已停止';
+            }
+        }, 3000);
+    } finally {
+        btns.forEach(b => b.disabled = false);
+    }
+}
+
+function toggleAutoEvolve() {
+    const btn = document.getElementById('evoAutoBtn');
+    const statusEl = document.getElementById('evoStatus');
+
+    if (evoAutoTimer) {
+        // Stop auto evolution
+        clearInterval(evoAutoTimer);
+        evoAutoTimer = null;
+        btn.textContent = '▶ 自动';
+        btn.classList.remove('active');
+        statusEl.textContent = '已停止';
+        statusEl.classList.remove('running');
+    } else {
+        // Start auto evolution: every 3 seconds, evolve 1 month
+        btn.textContent = '⏸ 停止';
+        btn.classList.add('active');
+        statusEl.textContent = '自动演化中';
+        statusEl.classList.add('running');
+        evoAutoTimer = setInterval(() => {
+            evolveMonths(1);
+        }, 3000);
+        // Also immediately trigger the first one
+        evolveMonths(1);
+    }
+}
+
+// Fetch initial month on load
+async function fetchCurrentMonth() {
+    try {
+        const resp = await fetch('/api/health');
+        const data = await resp.json();
+        if (data.months_simulated !== undefined) {
+            evoCurrentMonth = data.months_simulated;
+            document.getElementById('evoMonth').textContent = `第 ${evoCurrentMonth} 月`;
+        } else if (data.data && data.data.months_simulated !== undefined) {
+            evoCurrentMonth = data.data.months_simulated;
+            document.getElementById('evoMonth').textContent = `第 ${evoCurrentMonth} 月`;
+        }
+    } catch (e) {
+        // Ignore - will start from 0
+    }
+}
+
+// ============================================================
+// Init
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+    initMap();
+    fetchCurrentMonth();
+});
+</script>
+</body>
+</html>
