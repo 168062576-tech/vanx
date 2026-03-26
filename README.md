@@ -246,7 +246,7 @@ See [LICENSE](LICENSE) for details.
 
 - **GitHub Issues:** [Report bugs / Request features](https://github.com/168062576-tech/vanx/issues)
 - **Discord:** [Join our community](https://discord.gg/xxx)
-- **Email:** yulong@vanx.tech
+- **Email:** 168062576@qq.com
 
 ---
 
