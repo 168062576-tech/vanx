@@ -202,7 +202,7 @@ Apache License 2.0 — 个人和商业使用均免费。
 - **GitHub Issues:** [报告 Bug / 请求功能](https://github.com/YOUR_USERNAME/agent-world-engine/issues)
 - **Discord:** [加入社区](https://discord.gg/xxx)
 - **Twitter:** [@AgentWorldEng](https://twitter.com/AgentWorldEng)
-- **邮箱:** hello@agentworld.pro
+- **邮箱:** 168062576@qq.com
 
 ---
 
