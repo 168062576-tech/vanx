@@ -49,7 +49,6 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from deep_integration_engine import DeepIntegrationEngine
 from experiment_templates_v2 import ExperimentTemplateLibrary
 from narrative_engine import NarrativeEngine
-from storage import SQLiteStore
 from experiment_report_generator import ExperimentReportGenerator
 from experiment_runner import ExperimentRunner, ExperimentStatus
 
@@ -149,13 +148,12 @@ template_library = None
 narrator = NarrativeEngine()
 smart_reporter = None
 excel_reporter = None  # ExperimentReportGenerator 实例
-storage = None  # SQLiteStore 实例
 experiment_runner = None  # ExperimentRunner 实例
 
 
 def init_engine(count=None):
     """Initialize engine with specified agent count. Called by run.py."""
-    global engine, template_library, smart_reporter, excel_reporter, storage, experiment_runner
+    global engine, template_library, smart_reporter, excel_reporter, experiment_runner
     if count is None:
         count = INITIAL_AGENT_COUNT
     engine = DeepIntegrationEngine()
@@ -167,11 +165,7 @@ def init_engine(count=None):
     excel_reporter = ExperimentReportGenerator(output_dir=DATA_DIR)
     experiment_runner = ExperimentRunner()
 
-    # ── 初始化 SQLite 持久化 ──
-    db_path = os.path.join(DATA_DIR, 'world.db')
-    storage = SQLiteStore(db_path=db_path)
-    print(f"  [SQLite] 数据库已连接: {db_path}")
-
+    # 创建初始 Agent
     # 创建初始 Agent 并批量保存到 SQLite
     _init_population(count)
 
@@ -220,10 +214,6 @@ def _init_population(count: int):
     
     print(f"  [OK] Population ready: {len(engine.agents)} agents")
 
-    # 批量保存到 SQLite
-    if storage:
-        saved = storage.save_agents_batch(engine.agents.values())
-        print(f"  [SQLite] 已保存 {saved} 个 Agent 到数据库")
 
 
 # ============ JWT Token 辅助函数 ============
@@ -581,511 +571,6 @@ def simulate():
         return jsonify({
             'success': False,
             'error': f'模拟失败: {str(e)}'
-        }), 500
-
-
-# ============ SQLite 持久化 API ============
-
-@app.route(f'/api/{API_VERSION}/save', methods=['POST'])
-@require_api_key
-@rate_limit(10)
-def save_state():
-    """手动保存当前世界状态到 SQLite"""
-    try:
-        logger.info(f"API call: {request.path} from {request.remote_addr}")
-        if not storage:
-            return jsonify({
-                'success': False,
-                'error': 'SQLite 存储未初始化'
-            }), 500
-
-        # 保存所有 Agent
-        agent_count = storage.save_agents_batch(engine.agents.values())
-
-        # 保存事件（如果有新事件）
-        event_count = 0
-        if engine.events:
-            event_count = storage.save_events_batch(
-                engine.events, engine.months_simulated
-            )
-
-        # 创建快照记录
-        alive_count = sum(1 for a in engine.agents.values() if a.is_alive)
-        snapshot_name = f"manual_save_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        snapshot_id = storage.create_snapshot(
-            name=snapshot_name,
-            month=engine.months_simulated,
-            agent_count=alive_count,
-            config={'total_agents': len(engine.agents)}
-        )
-
-        # 保存元数据
-        storage.set_meta('last_save_time', datetime.now().isoformat())
-        storage.set_meta('months_simulated', str(engine.months_simulated))
-
-        return jsonify({
-            'success': True,
-            'message': '世界状态已保存到 SQLite',
-            'data': {
-                'agents_saved': agent_count,
-                'events_saved': event_count,
-                'snapshot_id': snapshot_id,
-                'snapshot_name': snapshot_name,
-                'db_path': storage.db_path
-            }
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'保存失败: {str(e)}',
-            'traceback': traceback.format_exc()
-        }), 500
-
-
-@app.route(f'/api/{API_VERSION}/load', methods=['POST'])
-@require_api_key
-def load_state():
-    """从 SQLite 加载世界状态（恢复数据）"""
-    try:
-        if not storage:
-            return jsonify({
-                'success': False,
-                'error': 'SQLite 存储未初始化'
-            }), 500
-
-        # 检查数据库中是否有数据
-        db_agent_count = storage.agent_count()
-        if db_agent_count == 0:
-            return jsonify({
-                'success': False,
-                'error': '数据库中没有已保存的 Agent 数据',
-                'hint': '请先使用 POST /api/v1/save 保存数据'
-            }), 404
-
-        # 加载所有 Agent 数据
-        agent_data_list = storage.load_all_agent_data()
-
-        # 清空当前引擎中的 Agent，重新从数据库恢复
-        restored_count = 0
-        skipped_count = 0
-
-        for agent_data in agent_data_list:
-            agent_id = agent_data['id']
-            if agent_id in engine.agents:
-                # 更新已存在的 Agent 属性
-                agent = engine.agents[agent_id]
-                for attr in ['age', 'gender', 'education_level', 'occupation',
-                             'income', 'net_worth', 'health_score', 'mental_health',
-                             'happiness', 'marital_status', 'spouse_id',
-                             'life_expectancy', 'credit_score', 'housing_status']:
-                    if attr in agent_data and hasattr(agent, attr):
-                        setattr(agent, attr, agent_data[attr])
-                restored_count += 1
-            else:
-                # Agent 不在引擎中，尝试重新创建
-                try:
-                    new_agent = engine.create_agent(agent_data)
-                    restored_count += 1
-                except Exception:
-                    skipped_count += 1
-
-        # 恢复元数据
-        saved_months = storage.get_meta('months_simulated')
-        last_save = storage.get_meta('last_save_time', '未知')
-
-        # 获取快照列表
-        snapshots = storage.list_snapshots()
-        latest_snapshot = snapshots[0] if snapshots else None
-
-        return jsonify({
-            'success': True,
-            'message': f'已从 SQLite 恢复 {restored_count} 个 Agent',
-            'data': {
-                'agents_restored': restored_count,
-                'agents_skipped': skipped_count,
-                'db_agent_count': db_agent_count,
-                'engine_agent_count': len(engine.agents),
-                'saved_months': saved_months,
-                'last_save_time': last_save,
-                'latest_snapshot': dict(latest_snapshot) if latest_snapshot else None,
-                'db_path': storage.db_path
-            }
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'加载失败: {str(e)}',
-            'traceback': traceback.format_exc()
-        }), 500
-
-
-@app.route(f'/api/{API_VERSION}/experiments/templates', methods=['GET'])
-def list_templates():
-    """获取实验模板列表"""
-    try:
-        category = request.args.get('category', None)
-        print(f"[DEBUG] template_library = {template_library}, templates count = {len(template_library.templates)}")
-        templates = template_library.list_templates(category)
-        print(f"[DEBUG] Returning {len(templates)} templates for category={category}")
-        templates_data = []
-        for t in templates:
-            templates_data.append({
-                'template_id': t.template_id,
-                'name': t.name,
-                'category': t.category,
-                'description': t.description,
-                'duration_months': t.duration_months,
-                'agent_count': t.agent_count,
-                'key_metrics': t.key_metrics,
-            })
-
-        return jsonify({
-            'success': True,
-            'data': {
-                'templates': templates_data,
-                'total': len(templates_data)
-            }
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'获取模板列表失败: {str(e)}'
-        }), 500
-
-
-@app.route(f'/api/{API_VERSION}/experiments/templates/<template_id>', methods=['GET'])
-def get_template(template_id):
-    """获取模板详情"""
-    try:
-        template = template_library.get_template(template_id)
-
-        if not template:
-            return jsonify({
-                'success': False,
-                'error': f'模板 {template_id} 不存在'
-            }), 404
-
-        return jsonify({
-            'success': True,
-            'data': {
-                'template_id': template.template_id,
-                'name': template.name,
-                'category': template.category,
-                'description': template.description,
-                'duration_months': template.duration_months,
-                'agent_count': template.agent_count,
-                'key_metrics': template.key_metrics,
-                'setup_params': template.setup_params,
-                'success_criteria': template.success_criteria,
-            }
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'获取模板详情失败: {str(e)}'
-        }), 500
-
-
-@app.route(f'/api/{API_VERSION}/experiments/run', methods=['POST'])
-@require_api_key
-@rate_limit(10)
-def run_experiment():
-    """基于模板运行实验（简化版：创建 Agent + 模拟指定月数）"""
-    try:
-        data = request.json
-        if not data:
-            return jsonify({
-                'success': False,
-                'error': '请求体不能为空'
-            }), 400
-
-        template_id = data.get('template_id')
-        if not template_id:
-            return jsonify({
-                'success': False,
-                'error': '必须指定 template_id'
-            }), 400
-
-        template = template_library.get_template(template_id)
-        if not template:
-            return jsonify({
-                'success': False,
-                'error': f'模板 {template_id} 不存在'
-            }), 404
-
-        # 根据模板配置创建 Agent（限制数量防止阻塞）
-        agent_count = min(data.get('agent_count', template.agent_count), 500)
-        months = min(data.get('months', template.duration_months), 60)
-
-        created_ids = []
-        for _ in range(agent_count):
-            agent = engine.create_agent(template.setup_params)
-            created_ids.append(agent.id)
-
-        # 运行模拟
-        sim_result = engine.simulate_month(months)
-
-        return jsonify({
-            'success': True,
-            'message': f'实验 {template.name} 已运行',
-            'data': {
-                'template_id': template_id,
-                'template_name': template.name,
-                'agents_created': agent_count,
-                'months_simulated': months,
-                'simulation_result': sim_result,
-                'total_agents': len(engine.agents),
-            }
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'运行实验失败: {str(e)}'
-        }), 500
-
-
-@app.route(f'/api/{API_VERSION}/trends', methods=['GET'])
-@require_api_key
-@rate_limit(60)
-def get_trends():
-    """趋势折线图数据（从引擎内存构建，无历史则模拟回溯）"""
-    try:
-        import random as rng
-
-        alive = [a for a in engine.agents.values() if a.is_alive]
-        n = max(len(alive), 1)
-
-        cur_pop = n
-        cur_inc = sum(a.income for a in alive) / n
-        employed = sum(1 for a in alive if a.occupation and a.occupation not in ('unemployed', ''))
-        cur_emp = employed / n * 100
-        sats = [a.life_satisfaction for a in alive if a.life_satisfaction is not None]
-        cur_sat = (sum(sats) / len(sats) / 20.0) if sats else 3.0  # 0-100 → 0-5
-
-        # 生成模拟历史趋势（从当前值回溯）
-        pts = min(24, max(engine.months_simulated, 12))
-        seed_rng = rng.Random(12345)
-        days, pop, income, emp, sat = [], [], [], [], []
-        for i in range(pts):
-            progress = i / pts
-            days.append(f'M-{pts - i}')
-            scale = 0.7 + 0.3 * progress
-            pop.append(max(10, int(cur_pop * scale + seed_rng.gauss(0, cur_pop * 0.02))))
-            income.append(round(max(0, cur_inc * scale + seed_rng.gauss(0, cur_inc * 0.03)), 0))
-            emp.append(round(max(30, min(100, cur_emp * scale + seed_rng.gauss(0, 2))), 1))
-            sat.append(round(max(1, min(5, cur_sat * scale + seed_rng.gauss(0, 0.1))), 2))
-        # 最后一个 = 当前真实值
-        days.append('Now')
-        pop.append(cur_pop)
-        income.append(round(cur_inc, 0))
-        emp.append(round(cur_emp, 1))
-        sat.append(round(cur_sat, 2))
-
-        return jsonify({
-            'days': days,
-            'population': pop,
-            'avg_income': income,
-            'employment_rate': emp,
-            'satisfaction': sat,
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'获取趋势数据失败: {str(e)}'
-        }), 500
-
-
-@app.route(f'/api/{API_VERSION}/regions', methods=['GET'])
-@require_api_key
-@rate_limit(60)
-def get_regions():
-    """区域地图数据"""
-    try:
-        from utils import REGION_DEFINITIONS as UTIL_REGIONS, OCCUPATION_REGION_MAP as UTIL_OCC_MAP
-
-        alive = [a for a in engine.agents.values() if a.is_alive]
-
-        # 职业 → 中文映射
-        _OCC_MAP = {
-            'unemployed': '其他',
-            'Technology': '信息技术', 'Finance': '金融',
-            'Healthcare': '医疗', 'Education': '教育',
-            'Retail': '服务业', 'Manufacturing': '制造业',
-            'Government': '政府',
-        }
-
-        # 按区域聚合 Agent
-        region_agents = {rkey: [] for rkey in UTIL_REGIONS}
-        for a in alive:
-            raw_occ = a.occupation or 'unemployed'
-            occ = _OCC_MAP.get(raw_occ, raw_occ)
-            if occ not in UTIL_OCC_MAP:
-                occ = '其他'
-            region_key = UTIL_OCC_MAP.get(occ, 'residential')
-            if region_key in region_agents:
-                region_agents[region_key].append(a)
-            else:
-                region_agents.setdefault('residential', []).append(a)
-
-        regions_out = []
-        for rkey, rdef in UTIL_REGIONS.items():
-            ra = region_agents.get(rkey, [])
-            ra_n = max(len(ra), 1)
-            avg_inc = round(sum(a.income for a in ra) / ra_n, 0) if ra else 0
-            regions_out.append({
-                'name': rdef['name'],
-                'name_en': rdef['name_en'],
-                'icon': rdef['icon'],
-                'bounds': rdef['bounds'],
-                'color': rdef['color'],
-                'agent_count': len(ra),
-                'avg_income': avg_inc,
-            })
-
-        return jsonify({
-            'regions': regions_out,
-            'layout': {'width': 100, 'height': 100, 'total_agents': len(alive)},
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'获取区域数据失败: {str(e)}'
-        }), 500
-
-
-@app.route(f'/api/{API_VERSION}/events/stream', methods=['GET'])
-def api_events_stream():
-    """SSE 实时事件推送（不需要 API Key，SSE 连接不方便带 header）"""
-    try:
-        from flask import Response, stream_with_context
-        import hashlib as _hashlib
-
-        def generate():
-            last_hash = ''
-            while True:
-                try:
-                    # 从引擎获取最新事件
-                    recent = engine.events[-5:] if engine.events else []
-                    events_data = []
-                    for evt in reversed(recent):
-                        # 映射事件类型到前端分类
-                        _evt_meta = {
-                            'agent_created': {'emoji': '👶', 'cat': 'birth'},
-                            'agent_died': {'emoji': '💀', 'cat': 'death'},
-                            'marriage_decision': {'emoji': '🎉', 'cat': 'marriage'},
-                            'employment_started': {'emoji': '💼', 'cat': 'job'},
-                            'career_change': {'emoji': '🔄', 'cat': 'job'},
-                            'crime_decision': {'emoji': '🚨', 'cat': 'crime'},
-                            'medical_expense': {'emoji': '🏥', 'cat': 'health'},
-                            'housing_change': {'emoji': '🏠', 'cat': 'house'},
-                            'epidemic': {'emoji': '🦠', 'cat': 'epidemic'},
-                        }
-                        meta = _evt_meta.get(evt.event_type, {'emoji': '📌', 'cat': 'misc'})
-                        # Generate Chinese description
-                        agent_name = narrator.generate_name(evt.agent_id, 'male') if evt.agent_id else '世界系统'
-                        _desc_map = {
-                            'agent_created': f'{agent_name} 来到了这个世界',
-                            'agent_died': f'{agent_name} 离开了这个世界',
-                            'marriage_decision': f'{agent_name} 步入了婚姻殿堂',
-                            'employment_started': f'{agent_name} 找到了新工作',
-                            'career_change': f'{agent_name} 换了一份新工作',
-                            'crime_decision': f'{agent_name} 走上了歧途',
-                            'crime_caught': f'{agent_name} 因违法行为被捕',
-                            'medical_expense': f'{agent_name} 去医院看了病',
-                            'housing_change': f'{agent_name} 搬了新家',
-                            'epidemic': f'流行病在社区蔓延',
-                            'debt_increase': f'{agent_name} 的负债增加了',
-                            'welfare_enrolled': f'{agent_name} 申请了社会福利',
-                            'risk_event': f'{agent_name} 遭遇了意外事件',
-                            'education_completed': f'{agent_name} 完成了学业',
-                            'divorce': f'{agent_name} 结束了婚姻关系',
-                        }
-                        text = _desc_map.get(evt.event_type, f'{agent_name} 经历了 {evt.event_type}')
-                        events_data.append({
-                            'type': meta['cat'],
-                            'emoji': meta['emoji'],
-                            'text': text,
-                            'time': str(evt.timestamp)[:16] if hasattr(evt, 'timestamp') else '',
-                            'agent_id': evt.agent_id,
-                        })
-
-                    content = json.dumps(events_data, ensure_ascii=False)
-                    h = _hashlib.md5(content.encode()).hexdigest()[:12]
-                    if h != last_hash and events_data:
-                        last_hash = h
-                        for ev in events_data:
-                            yield f"data: {json.dumps(ev, ensure_ascii=False)}\n\n"
-                    else:
-                        yield ": keepalive\n\n"
-                except Exception as e:
-                    yield f"data: {json.dumps({'type': 'error', 'text': str(e)})}\n\n"
-                time.sleep(3)
-
-        return Response(
-            stream_with_context(generate()),
-            mimetype='text/event-stream',
-            headers={
-                'Cache-Control': 'no-cache',
-                'X-Accel-Buffering': 'no',
-                'Connection': 'keep-alive',
-            }
-        )
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'SSE 流启动失败: {str(e)}'
-        }), 500
-
-
-@app.route(f'/api/{API_VERSION}/events', methods=['GET'])
-@require_api_key
-@rate_limit(60)
-def get_events():
-    """获取最近事件"""
-    try:
-        limit = request.args.get('limit', 50, type=int)
-        recent_events = engine.events[-limit:] if engine.events else []
-        events_data = []
-        _evt_meta = {
-            'agent_created': {'emoji': '👶', 'cat': 'birth', 'desc': '来到了这个世界'},
-            'agent_died': {'emoji': '💀', 'cat': 'death', 'desc': '离开了这个世界'},
-            'marriage_decision': {'emoji': '🎉', 'cat': 'marriage', 'desc': '步入了婚姻殿堂'},
-            'employment_started': {'emoji': '💼', 'cat': 'job', 'desc': '找到了新工作'},
-            'career_change': {'emoji': '🔄', 'cat': 'job', 'desc': '换了一份新工作'},
-            'crime_decision': {'emoji': '🚨', 'cat': 'crime', 'desc': '走上了歧途'},
-            'crime_caught': {'emoji': '⛓️', 'cat': 'crime', 'desc': '因违法行为被捕'},
-            'medical_expense': {'emoji': '🏥', 'cat': 'health', 'desc': '去医院看了病'},
-            'housing_change': {'emoji': '🏠', 'cat': 'house', 'desc': '搬了新家'},
-            'debt_increase': {'emoji': '💸', 'cat': 'misc', 'desc': '的负债增加了'},
-            'welfare_enrolled': {'emoji': '🤝', 'cat': 'misc', 'desc': '申请了社会福利'},
-            'risk_event': {'emoji': '⚠️', 'cat': 'misc', 'desc': '遭遇了意外事件'},
-            'education_completed': {'emoji': '🎓', 'cat': 'misc', 'desc': '完成了学业'},
-            'divorce': {'emoji': '💔', 'cat': 'marriage', 'desc': '结束了婚姻关系'},
-        }
-        for evt in reversed(recent_events):
-            meta = _evt_meta.get(evt.event_type, {'emoji': '📌', 'cat': 'misc', 'desc': evt.event_type})
-            agent_name = narrator.generate_name(evt.agent_id, 'male') if evt.agent_id else '系统'
-            events_data.append({
-                'type': meta['cat'],
-                'emoji': meta['emoji'],
-                'text': f'{agent_name} {meta["desc"]}',
-                'time': str(evt.timestamp)[:16] if hasattr(evt, 'timestamp') else '',
-                'agent_id': evt.agent_id,
-                'event_type': evt.event_type,
-            })
-
-        return jsonify({
-            'success': True,
-            'data': {
-                'events': events_data,
-                'total_events': len(engine.events),
-                'showing': len(events_data)
-            }
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'获取事件失败: {str(e)}'
         }), 500
 
 
@@ -2666,8 +2151,9 @@ def get_agent_finance(agent_id):
 
 
 @app.route(f'/api/{API_VERSION}/templates', methods=['GET'])
+@app.route(f'/api/{API_VERSION}/experiments/templates', methods=['GET'])
 def list_templates_alias():
-    """获取实验模板列表（/api/v1/templates 别名，兼容前端）"""
+    """获取实验模板列表（/api/v1/templates 和 /api/v1/experiments/templates 别名，兼容前端）"""
     try:
         category = request.args.get('category', None)
         templates = template_library.list_templates(category)
@@ -2681,6 +2167,8 @@ def list_templates_alias():
                 'duration_months': t.duration_months,
                 'agent_count': t.agent_count,
                 'key_metrics': t.key_metrics,
+                'locked': getattr(t, 'locked', False),
+                'lock_reason': getattr(t, 'lock_reason', ''),
             })
         return jsonify({
             'success': True,

@@ -294,7 +294,85 @@
         .template-grid { grid-template-columns: 1fr; }
         .console-header { flex-direction: column; text-align: center; }
     }
-    </style>
+    
+    /* 锁定模板样式 - 增强版 */
+    .tpl-card.locked {
+        opacity: 0.4;
+        background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+        cursor: not-allowed;
+        position: relative;
+        overflow: hidden;
+        border: 2px solid #bdbdbd;
+        filter: grayscale(80%);
+    }
+    .tpl-card.locked::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 10px,
+            rgba(0,0,0,0.03) 10px,
+            rgba(0,0,0,0.03) 20px
+        );
+        pointer-events: none;
+        z-index: 1;
+    }
+    .tpl-card.locked:hover {
+        transform: none !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+    }
+    .lock-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(230,230,230,0.9) 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        backdrop-filter: blur(2px);
+    }
+    .lock-icon {
+        font-size: 72px;
+        margin-bottom: 12px;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        animation: lockPulse 2s ease-in-out infinite;
+    }
+    @keyframes lockPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+    .lock-reason {
+        font-size: 18px;
+        font-weight: 700;
+        color: #ff6b6b;
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        padding: 6px 16px;
+        border: 2px solid #ff6b6b;
+        border-radius: 20px;
+        background-color: rgba(255,107,107,0.1);
+        box-shadow: 0 2px 8px rgba(255,107,107,0.3);
+        letter-spacing: 1px;
+    }
+    .lock-reason::before {
+        content: '👑 ';
+    }
+    .lock-reason::after {
+        content: ' 👑';
+    }
+
+</style>
 </head>
 <body>
 
@@ -720,18 +798,28 @@ function renderTemplates(list) {
     grid.innerHTML = list.map(t => {
         const info = catMap[t.category] || { icon: '📁', label: t.category };
         const sel = selectedTemplate && selectedTemplate.template_id === t.template_id ? ' selected' : '';
-        return '<div class="tpl-card' + sel + '" onclick="selectTpl(\'' + t.template_id + '\', this)">' +
+        const locked = t.locked ? true : false;
+        const lockOverlay = locked ? '<div class="lock-overlay"><span class="lock-icon">🔒</span><span class="lock-reason">' + (t.lock_reason || '已锁定') + '</span></div>' : '';
+        const clickHandler = locked ? '' : 'onclick="selectTpl(\'' + t.template_id + '\', this)"';
+        const cardClass = 'tpl-card' + (locked ? ' locked' : '') + sel;
+        return '<div class="' + cardClass + '" ' + clickHandler + '>' +
             '<span class="cat-badge">' + info.icon + ' ' + info.label + '</span>' +
             '<div class="tpl-name">' + t.name + '</div>' +
             '<div class="tpl-desc">' + t.description + '</div>' +
             '<div class="tpl-meta">⏱️ ' + t.duration_months + '月 | 👥 推荐' + t.agent_count.toLocaleString() + ' Agent</div>' +
-            '<div class="tpl-metrics">📈 指标：' + t.key_metrics.join('、') + '</div>' +
+            '<div class="tpl-metrics">📈 指标：' + (t.key_metrics && t.key_metrics.length > 0 ? t.key_metrics.join('、') : '暂无') + '</div>' +
+            lockOverlay +
             '</div>';
     }).join('');
 }
 
 function selectTpl(id, el) {
-    selectedTemplate = templates.find(t => t.template_id === id);
+    const tpl = templates.find(t => t.template_id === id);
+    if (tpl && tpl.locked) {
+        alert('🔒 该模板为专业版功能，开源版暂不可用\n\n解锁方式：升级至专业版或使用 3 个免费核心模板');
+        return;
+    }
+    selectedTemplate = tpl;
     document.querySelectorAll('.tpl-card').forEach(c => c.classList.remove('selected'));
     if (el) el.classList.add('selected');
     document.getElementById('btnToStep2').disabled = false;
