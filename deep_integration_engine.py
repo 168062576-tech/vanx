@@ -610,11 +610,12 @@ class DeepIntegrationEngine:
         self.deep_micro_system.create_deep_profile(agent_id, age, income)
         self.deep_micro_system.create_micro_profile(agent_id, age, agent.occupation)
         
-        # 金融系统
-        try:
-            self.financial_system.create_financial_profile(agent)
-        except Exception as _e:
-            logger.warning(f"Financial system init failed for agent: {_e}")
+        # 金融系统（可选模块，开源版默认不启用）
+        if self.financial_system is not None:
+            try:
+                self.financial_system.create_financial_profile(agent)
+            except Exception as _e:
+                logger.debug(f"Financial system init failed for agent: {_e}")
     
     def _estimate_income(self, education: str, age: int) -> float:
         """估算收入"""
@@ -788,11 +789,12 @@ class DeepIntegrationEngine:
             except Exception as _e:
                 logger.warning(f"Phase 7 (swarm) failed: {_e}")
             
-            # 8. 金融市场更新（股市、利率等宏观金融）
-            try:
-                self.financial_system.update_market()
-            except Exception as _e:
-                logger.warning(f"Phase 8 (financial_market) failed: {_e}")
+            # 8. 金融市场更新（股市、利率等宏观金融）- 可选模块
+            if self.financial_system is not None:
+                try:
+                    self.financial_system.update_market()
+                except Exception as _e:
+                    logger.debug(f"Phase 8 (financial_market) failed: {_e}")
             
             # 9. 文化传承（代际影响）
             if self.cultural_inheritance:
@@ -956,18 +958,19 @@ class DeepIntegrationEngine:
         agent.income *= _mod
         agent.income = max(0, min(agent.income, 1000000))  # 硬上限100万/月
         
-        # 金融系统月度更新
-        try:
-            fin_result = self.financial_system.update_agent_monthly(agent)
-            fin_summary = self.financial_system.get_financial_summary(agent_id)
-            if fin_summary:
-                # 金融资产计入净资产
-                agent.net_worth += fin_summary.get('total_investments', 0)
-            for event in fin_result.get('events', []):
-                self.emit_event(event.get('type', 'financial'), agent_id, event, "financial")
-                events.append(event)
-        except Exception as _e:
-            logger.warning(f"Financial monthly update failed for agent {agent_id}: {_e}")
+        # 金融系统月度更新（可选模块）
+        if self.financial_system is not None:
+            try:
+                fin_result = self.financial_system.update_agent_monthly(agent)
+                fin_summary = self.financial_system.get_financial_summary(agent_id)
+                if fin_summary:
+                    # 金融资产计入净资产
+                    agent.net_worth += fin_summary.get('total_investments', 0)
+                for event in fin_result.get('events', []):
+                    self.emit_event(event.get('type', 'financial'), agent_id, event, "financial")
+                    events.append(event)
+            except Exception as _e:
+                logger.debug(f"Financial monthly update failed for agent {agent_id}: {_e}")
         
         # 医疗
         health_events = self.healthcare_system.update_monthly(agent_id, agent.age)

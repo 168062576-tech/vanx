@@ -373,6 +373,7 @@
     }
 
 </style>
+    <script src="/js/i18n.js"></script>
 </head>
 <body>
 
@@ -382,11 +383,12 @@
 <div class="console-header">
     <h1>🐉 御龙军虚拟世界 · 实验控制台</h1>
     <nav class="nav-links" style="display:flex;gap:8px;align-items:center">
-        <a href="/" class="nav-btn">🌍 世界地图</a>
-        <a href="/dashboard" class="nav-btn">📊 仪表盘</a>
-        <a href="/console" class="nav-btn active">🎮 控制台</a>
-        <a href="/demo" class="nav-btn">🎬 演示</a>
-        <a href="/reports" class="nav-btn">📊 报告</a>
+        <a href="/" class="nav-btn" data-i18n="nav.worldMap">🌍 世界地图</a>
+        <a href="/dashboard" class="nav-btn" data-i18n="nav.dashboard">📊 仪表盘</a>
+        <a href="/console" class="nav-btn active" data-i18n="nav.console">🎮 控制台</a>
+        <a href="/demo" class="nav-btn" data-i18n="nav.demo">🎬 演示</a>
+        <a href="/reports" class="nav-btn" data-i18n="nav.reports">📊 报告</a>
+        <button id="langToggle" onclick="toggleLang()" style="margin-left:8px;padding:5px 12px;border-radius:6px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.15);color:#fff;cursor:pointer;font-size:.85em">🌐 中文</button>
     </nav>
 </div>
 
@@ -408,7 +410,7 @@
         <div class="status-row">
             <div class="status-card">
                 <div class="icon">🌍</div>
-                <div class="name">API 服务</div>
+                <div class="name">\1API 服务\3</div>
                 <div class="port">v5 API Server</div>
                 <div>
                     <span class="status-dot" id="dotApi"></span>
@@ -417,16 +419,16 @@
             </div>
             <div class="status-card">
                 <div class="icon">📊</div>
-                <div class="name">Web 服务</div>
+                <div class="name">\1Web 服务\3</div>
                 <div class="port">Web Server</div>
                 <div>
                     <span class="status-dot online" id="dotWeb"></span>
-                    <span class="status-text" id="stWeb">运行中</span>
+                    <span class="status-text" id="stWeb">\1运行中\3</span>
                 </div>
             </div>
             <div class="status-card">
                 <div class="icon">🔬</div>
-                <div class="name">实验引擎</div>
+                <div class="name">\1实验引擎\3</div>
                 <div class="port">Experiment Engine</div>
                 <div>
                     <span class="status-dot" id="dotExp"></span>
@@ -439,23 +441,23 @@
         <div class="nav-grid">
             <a class="nav-card primary" href="javascript:void(0)" onclick="switchView('experiment', document.querySelectorAll('.view-tab')[1])">
                 <div class="card-icon">🚀</div>
-                <div class="card-title">开始实验</div>
-                <div class="card-desc">3 个实验模板 · 真实 Agent 演化 · 自动生成商业报告</div>
+                <div class="card-title">\1开始实验\3</div>
+                <div class="card-desc">\13 个实验模板 · 真实 Agent 演化 · 自动生成商业报告\3</div>
             </a>
             <a class="nav-card" href="/">
                 <div class="card-icon">🌍</div>
-                <div class="card-title">查看世界</div>
-                <div class="card-desc">Agent 实时状态 · 区域地图 · 人口分布 · 经济指标 · 事件流</div>
+                <div class="card-title">\1查看世界\3</div>
+                <div class="card-desc">\1Agent 实时状态 · 区域地图 · 人口分布 · 经济指标 · 事件流\3</div>
             </a>
             <a class="nav-card" href="/reports">
                 <div class="card-icon">📊</div>
-                <div class="card-title">实验报告</div>
-                <div class="card-desc">查看所有已完成实验的可视化报告、数据下载</div>
+                <div class="card-title">\1实验报告\3</div>
+                <div class="card-desc">\1查看所有已完成实验的可视化报告、数据下载\3</div>
             </a>
             <a class="nav-card" href="/demo">
                 <div class="card-icon">🎬</div>
-                <div class="card-title">演示模式</div>
-                <div class="card-desc">快速体验虚拟世界的 Agent 演化 Demo</div>
+                <div class="card-title">\1演示模式\3</div>
+                <div class="card-desc">\1快速体验虚拟世界的 Agent 演化 Demo\3</div>
             </a>
         </div>
 
@@ -463,7 +465,7 @@
         <div class="section-title">📋 最近实验</div>
         <div class="dash-panel">
             <div id="recentExps">
-                <div class="empty-text">暂无实验记录 — 点击「开始实验」创建第一个</div>
+                <div class="empty-text">\1暂无实验记录\3</div>
             </div>
         </div>
     </div>
@@ -735,7 +737,7 @@ function loadRecentExps() {
         const list = (data.experiments || []).slice(-5).reverse();
         const el = document.getElementById('recentExps');
         if (list.length === 0) {
-            el.innerHTML = '<div class="empty-text">暂无实验记录 — 点击「开始实验」创建第一个</div>';
+            el.innerHTML = '<div class="empty-text">\1暂无实验记录\3</div>';
             return;
         }
         el.innerHTML = list.map(e => {
@@ -1187,6 +1189,13 @@ window.addEventListener('DOMContentLoaded', function() {
 
     setInterval(refreshHistory, 10000);
 });
+</script>
+<script>
+function toggleLang() {
+    const newLang = window.i18n.toggle();
+    const btn = document.getElementById('langToggle');
+    btn.textContent = newLang === 'zh' ? '🌐 中文' : '🌐 English';
+}
 </script>
 </body>
 </html>
